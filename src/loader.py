@@ -34,6 +34,15 @@ maxArticles = 2000
 time_lim = 30
 
 
+# cn.arXiv.org (China)
+# de.arXiv.org (Germany)
+# in.arXiv.org (India)
+# es.arXiv.org (Spain)
+# lanl.arXiv.org (U.S. mirror at Los Alamos)
+# arXiv.org
+
+mirror = "lanl."
+
 def pdf_from_url_to_txt(url):
     rsrcmgr = PDFResourceManager()
     retstr = StringIO()
@@ -98,6 +107,9 @@ def main():
     if 'darwin' in sys.platform:
         subprocess.Popen('caffeinate') # stay active (os x)
 
+    if len(mirror) > 0:
+        print "Mirror: {0}".format(mirror)
+
     print "Connecting to arxiv..."
     data = urllib2.urlopen(target_url)
 
@@ -122,7 +134,7 @@ def main():
     for j in range(min(len(articles), maxArticles)):
         try:
             if articles[j] not in base:
-                link = "https://arxiv.org/pdf/{0}.pdf".format(articles[j])
+                link = "http://{0}arXiv.org/pdf/{1}.pdf".format(mirror, articles[j])
 
                 text, load_time, convert_time = pdf_from_url_to_txt(link)
 
