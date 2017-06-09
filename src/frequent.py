@@ -5,7 +5,7 @@ from glob import glob
 import nltk
 import re
 import os
-
+from gensim.models import Phrases
 
 month = 04
 year = 16
@@ -14,7 +14,7 @@ stat_path = "../stat/frequency/"
 n_articles = 1500
 max_n_print = 30
 n_results = 100
-
+biGram = True
 
 def file_counter(lines, term):
     cnt = 0
@@ -69,31 +69,33 @@ def get_unique_articles(articles_dict):     # FIXME
 
 def line_filter(text, min_length=4):  # FIXME
     filtered = []
-    exp1 = re.compile('==')
-    exp2 = re.compile('{.*}')
+    exp1 = re.compile(r'==')
+    exp2 = re.compile(r'{.*}')
+    alphanum = re.compile(r'[\W_]+')
     for line in text:
-        nline = line.strip().replace(",", "")\
-                            .replace(";", "")\
-                            .replace(":", "")\
-                            .replace('"', "")\
-                            .replace('(', "")\
-                            .replace(')', "")
+        nline = alphanum.sub(' ', line).strip()
         if len(exp1.findall(nline)) == 0 \
                 and len(exp2.findall(nline)) == 0:
+
             nline = " ".join([x for x in nline.split()
-                              if len(x) >= min_length])
+                                if len(x) >= min_length
+                                and not x.isdigit()
+                                and not x in stoplist])
+
             filtered.append(nline.lower())
+
     return filtered
 
 
 def tf_idf(*args):
-    #global_counter = Counter()
+    global_counter = Counter()
+
+    for counter_d in args:
+        global_counter += Counter(counter_d)
+
     #for j in range(len(args)):
     #    sub_counter = Counter({k : 1 for k in args[j].keys()})
     #    global_counter += sub_counter
-
-    global_counter = Counter()
-    for counter_d in args: global_counter += Counter(counter_d)
 
     result = []
     for counter_d in args:
@@ -104,19 +106,6 @@ def tf_idf(*args):
 
         result.append(subresult)
     return result
-
-
-def add_dicts(dict1, dict2):
-    sum_dict = {}
-
-    for key in list(set(dict1) | set(dict2)):
-        val1 = 0
-        val2 = 0
-        if key in dict1: val1 = dict1[key]
-        if key in dict2: val2 = dict2[key]
-        sum_dict[key] = val1 + val2
-
-    return sum_dict
 
 
 terms = get_topics("../topics.txt")
@@ -151,15 +140,26 @@ for pair in unique_pairs:
 print "-" * 34
 
 print "Counting words..."
-count_base = []
+
+topics_texts = []
+stoplist = set(nltk.corpus.stopwords.words("english"))
 for g in range(len(unique_articles)):
-    cnt_d = Counter()
+    topic_sentences = []
     for file in unique_articles[g]:
         text = " ".join(line_filter(
                             ascii_normalize(
                                 open(file, "r").readlines()))).lower().split(" ")
+        topic_sentences.append(text)
+    topics_texts.append(topic_sentences)
 
-        cnt_d += Counter(text)
+if biGram:
+    bigram_transformer = Phrases([sentence for topic_content in topics_texts
+                                            for sentence in topic_content])
+    topics_texts = [bigram_transformer[topic_content] for topic_content in topics_texts]
+
+count_base = []
+for topic_content in topics_texts:
+    cnt_d = sum(map(Counter, topic_content), Counter())
 
     if '' in cnt_d.keys(): del cnt_d['']  # python "feature": counting zero string
     count_base.append(dict(cnt_d))
