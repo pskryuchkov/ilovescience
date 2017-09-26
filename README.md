@@ -12,11 +12,11 @@ Set of scripts for [arxiv.org](https://arxiv.org/) articles text mining
 
 `cite.py` counts references and show most citied articles.
 
-`wove.py` console for semantic similar words searching ([word2vec](https://ru.wikipedia.org/wiki/Word2vec)). Pre-calclulated wordvectors required (use -b flag).
+`wove.py` console for semantic similar words searching ([word2vec](https://ru.wikipedia.org/wiki/Word2vec)). Pre-calclulated wordvectors required.
 
 Articles stored in `.txt` format in `arxiv/<section>/<year>/<month>/` Results stored in `stat` path.
 
-### Usage 
+### Usage
 
 `<script> <section>.<year>.<month>`
 
