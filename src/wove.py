@@ -1,13 +1,13 @@
 # word2vec algorithm applying to scientific articles base
 #
 # calculate word vectors
-# python wotvec.py -b cond-mat.16.03
+# python wove.py cond-mat.16.03 -b
 #
 # topics word vectors info
-# python wotvec.py -t cond-mat.16.03
+# python wove.py cond-mat.16.03 -t
 #
 # word2vec console
-# python wotvec.py -c cond-mat.16.03
+# python wove.py cond-mat.16.03
 
 from gensim.models import Word2Vec, Phrases
 from unidecode import unidecode
@@ -163,43 +163,43 @@ def console(path):
             for record in model.most_similar(positive=[query], topn=10):
                 print "{}, {}, {}".format(record[0], round(record[1], 2), model.vocab[record[0]].count)
         else:
-            print "There is not such word: '{}'".format(query)
+            print "There is no such word: '{}'".format(query)
 
 
 def arg_run():
-    parser = argparse.ArgumentParser(description="Flip a switch by setting a flag")
-    parser.add_argument('-b', nargs=1, help="Build Wordvec")
-    parser.add_argument('-t', nargs=1, help="Topics Info")
-    parser.add_argument('-c', nargs=1, help="Console")
+    if len(argv) < 2:
+        raise Exception("Too few arguments")
 
-    args = parser.parse_args()
+    if len(argv) > 3:
+        raise Exception("Too many arguments")
 
-    arg_sum = sum(map(int, [args.b is not None,
-                       args.t is not None,
-                       args.c is not None]))
+    b_flag = False
+    t_flag = False
 
-    if arg_sum < 1:
-        print "Error: too few arguments"
-    elif arg_sum > 1:
-        print "Error: too many arguments"
-    elif arg_sum == 1:
-        s, y, m = argv[2].split(".")
-        y, m = int(y), int(m)
-        if args.b is not None:
+    if len(argv) == 3:
+        b_flag = argv[2] == "-b"
+        t_flag = argv[2] == "-t"
+
+    s, y, m = argv[1].split(".")
+    y, m = int(y), int(m)
+
+    if not b_flag and not t_flag:
+        # console
+        print "Word2vec on arxiv {}.{:02d}".format(y, m)
+        console(vec_path.format(s, y, m))
+    else:
+        if b_flag:
             # build
             model = build_word_vec(texts_path.format(s, y, m))
             model.save(vec_path.format(s, y, m))
-        elif args.t is not None:
+        elif t_flag:
             # topic info
             topics_info(vec_path.format(s, y, m))
-        else:
-            # console
-            print "Word2vec on arxiv {}.{:02d}".format(y, m)
-            console(vec_path.format(s, y, m))
+
 
 if __name__ == "__main__":
     # initialization
-    stoplist = get_lines("stoplist.txt")
+    stoplist = get_lines("../stoplist.txt")
     arg_run()
 
 # TODO: discover relations
