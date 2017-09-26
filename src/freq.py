@@ -11,12 +11,12 @@ from sys import argv
 import re
 import os
 
-check_unrelevant = True
-biGram = True
 stat_path = "../stat/frequency/"
+check_unrelevant = True
 n_articles = 1000
 max_n_print = 6
 n_results = 100
+biGram = True
 
 
 def file_counter(lines, term):
@@ -176,7 +176,6 @@ def save_corr_matrix(fn, data):
 def check_dir(path):
     if not os.path.isdir(path):
         os.makedirs(path)
-
 
 
 def main(section, year, month): # FIXME: too large function
