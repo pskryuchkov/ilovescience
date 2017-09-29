@@ -1,5 +1,6 @@
 numpy==1.12.1
-gensim==2.3.0
+gensim==3.0.0
+openpyxl==2.5.0a3
 pdfminer==20140328
 SocksiPy_branch==1.01
 Unidecode==0.04.21

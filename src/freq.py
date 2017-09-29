@@ -2,6 +2,7 @@
 # for each term statistics save to '../stat/frequency/<term>.csv'
 # usage: 'python freq.py cond-mat.16.03'
 from collections import defaultdict, Counter
+from openpyxl import Workbook
 from gensim.models import Phrases
 from unidecode import unidecode
 from numpy import log
@@ -10,6 +11,7 @@ from glob import glob
 from sys import argv
 import re
 import os
+
 
 stat_path = "../stat/frequency/"
 check_unrelevant = True
@@ -275,11 +277,15 @@ def main(section, year, month): # FIXME: too large function
 
     if not os.path.isdir(dest_path): os.makedirs(dest_path)
 
-    for v in range(len(unique_articles)):
-        check_dir(dest_path + "term_list/")
+    wb = Workbook(write_only=False)
 
-        report = open("{}{}{}.csv".format(dest_path, "term_list/", e_terms[v]), "w+")
-        report.write("sep=,\n")
+    for v in range(len(unique_articles)):
+
+        if not v:
+            ws = wb.active
+            ws.title = e_terms[v]
+        else:
+            ws = wb.create_sheet(e_terms[v])
 
         print "-" * 35
         print e_terms[v].upper()
@@ -293,9 +299,10 @@ def main(section, year, month): # FIXME: too large function
                     print  '%-22s %f %d' % (elem, round(top[v][elem], 6), count_base[v][elem])
                 elif h == max_n_print: print "..."
 
-                report.write("{}, {}, {}\n".format(elem, round(top[v][elem], 6),
-                             count_base[v][elem]))
-        report.close()
+                ws.append([elem, round(top[v][elem], 6),
+                             count_base[v][elem]])
+
+        wb.save(dest_path + "topics.xlsx")
 
 
 def arg_run():
