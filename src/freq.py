@@ -2,23 +2,113 @@
 # for each term statistics save to '../stat/frequency/<term>.csv'
 # usage: 'python freq.py cond-mat.16.03'
 from collections import defaultdict, Counter
-from openpyxl import Workbook
 from gensim.models import Phrases
 from unidecode import unidecode
-from numpy import log
-import numpy as np
 from glob import glob
 from sys import argv
+import numpy as np
 import re
 import os
 
 
-stat_path = "../stat/frequency/"
-check_unrelevant = True
-n_articles = 1000
-max_n_print = 6
-n_results = 100
 biGram = True
+n_results = 10
+n_articles = 100
+check_unrelevant = True
+stat_path = "../stat/frequency/"
+section_path = None
+
+
+class Table:
+    def __init__(self, name, content,
+                 labels=None):
+
+        self.name = name
+        self.content = content
+        self.labels = labels
+
+    def sort(self, col_idx, reverse=True):
+        sorted_table = []
+
+        for sheet in self.content:
+            sorted_table.append(sorted(sheet,
+                                       key=lambda x: x[col_idx],
+                                       reverse=reverse))
+
+        return Table(self.name, sorted_table, self.labels)
+
+
+def save_csv(path="./", sep=","):
+    def decorator(func):
+        def inner(labels, count_dicts):
+
+            table = func(labels, count_dicts)
+            for label, sheet in zip(table.labels, table.content):
+
+                f = open(path + label + ".csv", "w")
+                f.write("sep={}\n".format(sep))
+
+                for line in sheet:
+                    f.write(sep.join(map(lambda x: str(x), line)) + "\n")
+
+                f.close()
+
+            return table
+        return inner
+    return decorator
+
+
+def save_excel(path="./"):
+    def decorator(func):
+        def inner(labels, count_dicts):
+
+            from openpyxl import Workbook
+            table = func(labels, count_dicts)
+
+            wb = Workbook(write_only=False)
+
+            first_sheet = True
+            for label, sheet in zip(table.labels, table.content):
+
+                if first_sheet:
+                    first_sheet = False
+                    ws = wb.active
+                    ws.title = label
+                else:
+                    ws = wb.create_sheet(label)
+
+                for line in sheet:
+                    ws.append(line)
+            print path
+            wb.save(path + table.name + ".xlsx")
+            wb.close()
+
+            return table
+        return inner
+    return decorator
+
+
+def console_table(n_print=6, n_sep=30):
+    def decorator(func):
+        def inner(labels, count_dicts):
+
+            table = func(labels, count_dicts)
+            for label, sheet in zip(table.labels, table.content):
+
+                print "-" * n_sep
+                print label.upper()
+                print "-" * n_sep
+
+                for j, line in enumerate(sheet):
+                    if j < n_print:
+                        print ", ".join(map(lambda x: str(x), line))
+                    else:
+                        print "..."
+                        break
+
+            return table
+        return inner
+    return decorator
 
 
 def file_counter(lines, term):
@@ -121,10 +211,31 @@ def tf_idf(*args):
 
         for key in counter_d.keys():
             subresult[key] = (1.0 * counter_d[key] / num_words) * \
-                             log(1.0 + 1.0 * len(args) / global_counter[key])
+                             np.log(1.0 + 1.0 * len(args) / global_counter[key])
 
         result.append(subresult)
     return result
+
+
+@save_excel()
+def calc_stat(labels, count_dicts):
+
+    top = tf_idf(*count_dicts)
+    sat_base = []
+
+    for v in range(len(count_dicts)):
+        word_sats = []
+
+        for h, key in enumerate(top[v]):
+
+            if key not in stop_list:
+                word_sats.append([key,
+                                  round(top[v][key], 6),
+                                  count_dicts[v][key]])
+
+        sat_base.append(word_sats)
+
+    return Table("topics", sat_base, labels).sort(col_idx=1)
 
 
 def save_corr_matrix(fn, data):
@@ -273,36 +384,8 @@ def main(section, year, month): # FIXME: too large function
         count_base.append(dict(cnt_d))
 
     print "Calculating tf-idf..."
-    top = tf_idf(*count_base)
 
-    if not os.path.isdir(dest_path): os.makedirs(dest_path)
-
-    wb = Workbook(write_only=False)
-
-    for v in range(len(unique_articles)):
-
-        if not v:
-            ws = wb.active
-            ws.title = e_terms[v]
-        else:
-            ws = wb.create_sheet(e_terms[v])
-
-        print "-" * 35
-        print e_terms[v].upper()
-        print "-" * 35
-
-        for h, elem in enumerate(sorted(top[v],
-                                        key=top[v].get, reverse=True)[:n_results]):
-            if elem not in stop_list:
-
-                if h < max_n_print:
-                    print  '%-22s %f %d' % (elem, round(top[v][elem], 6), count_base[v][elem])
-                elif h == max_n_print: print "..."
-
-                ws.append([elem, round(top[v][elem], 6),
-                             count_base[v][elem]])
-
-        wb.save(dest_path + "topics.xlsx")
+    calc_stat(e_terms, count_base)
 
 
 def arg_run():
@@ -311,6 +394,9 @@ def arg_run():
     elif len(argv) > 2:
         print "Error: too many arguments"
     else:
+        global section_path
+        section_path = stat_path + argv[1] + "/"
+
         s, y, m = argv[1].split(".")
         y, m = int(y), int(m)
         main(s, y, m)
