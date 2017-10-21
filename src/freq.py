@@ -1,5 +1,4 @@
 # texts frequency analysis
-# for each term statistics save to '../stat/frequency/<term>.csv'
 # usage: 'python freq.py cond-mat.16.03'
 from collections import defaultdict, Counter
 from gensim.models import Phrases
@@ -11,21 +10,37 @@ import re
 import os
 
 
+vol = None
 biGram = True
 n_results = 10
 n_articles = 100
 check_unrelevant = True
 stat_path = "../stat/frequency/"
-section_path = None
 
 
-class Table:
-    def __init__(self, name, content,
-                 labels=None):
-
+class SingleTable:
+    def __init__(self, name, content):
         self.name = name
         self.content = content
+
+    def sort(self, col_idx, reverse=True):
+        sorted_table = sorted(self.content,
+                              key=lambda x: x[col_idx],
+                              reverse=reverse)
+
+        return SingleTable(self.name, sorted_table)
+
+    def to_multi(self):
+        return MultiTable(self.name, [self.content], [self.name])
+
+
+class MultiTable:
+    def __init__(self, name, content,
+                 labels):
+
+        self.name = name
         self.labels = labels
+        self.content = content
 
     def sort(self, col_idx, reverse=True):
         sorted_table = []
@@ -35,14 +50,18 @@ class Table:
                                        key=lambda x: x[col_idx],
                                        reverse=reverse))
 
-        return Table(self.name, sorted_table, self.labels)
+        return MultiTable(self.name, sorted_table, self.labels)
 
 
-def save_csv(path="./", sep=","):
+def save_csv(path="", sep=","):
     def decorator(func):
-        def inner(labels, count_dicts):
+        def inner(*args):
 
-            table = func(labels, count_dicts)
+            table = func(*args)
+
+            if isinstance(table, SingleTable):
+                table = table.to_multi()
+
             for label, sheet in zip(table.labels, table.content):
 
                 f = open(path + label + ".csv", "w")
@@ -58,14 +77,17 @@ def save_csv(path="./", sep=","):
     return decorator
 
 
-def save_excel(path="./"):
+def save_excel(path=""):
     def decorator(func):
-        def inner(labels, count_dicts):
+        def inner(*args):
 
             from openpyxl import Workbook
-            table = func(labels, count_dicts)
+            table = func(*args)
 
-            wb = Workbook(write_only=False)
+            if isinstance(table, SingleTable):
+                table = table.to_multi()
+
+            wb = Workbook()
 
             first_sheet = True
             for label, sheet in zip(table.labels, table.content):
@@ -79,7 +101,7 @@ def save_excel(path="./"):
 
                 for line in sheet:
                     ws.append(line)
-            print path
+
             wb.save(path + table.name + ".xlsx")
             wb.close()
 
@@ -90,9 +112,13 @@ def save_excel(path="./"):
 
 def console_table(n_print=6, n_sep=30):
     def decorator(func):
-        def inner(labels, count_dicts):
+        def inner(*args):
 
-            table = func(labels, count_dicts)
+            table = func(*args)
+
+            if isinstance(table, SingleTable):
+                table = table.to_multi()
+
             for label, sheet in zip(table.labels, table.content):
 
                 print "-" * n_sep
@@ -217,8 +243,17 @@ def tf_idf(*args):
     return result
 
 
-@save_excel()
-def calc_stat(labels, count_dicts):
+@save_excel(stat_path)
+def calc_stat(labels, topics_texts):
+    count_dicts = []
+    for topic_content in topics_texts:
+        cnt_d = sum(map(Counter, topic_content), Counter())
+
+        # python "feature": counting zero string
+        if '' in cnt_d.keys():
+            del cnt_d['']
+
+        count_dicts.append(dict(cnt_d))
 
     top = tf_idf(*count_dicts)
     sat_base = []
@@ -235,13 +270,31 @@ def calc_stat(labels, count_dicts):
 
         sat_base.append(word_sats)
 
-    return Table("topics", sat_base, labels).sort(col_idx=1)
+    return MultiTable(vol + "/topics", sat_base, labels).sort(col_idx=1)
 
 
-def save_corr_matrix(fn, data):
+@save_csv(stat_path)
+def calc_corr(terms, articles):
+    unique_pairs = [[i, j] for j in range(len(terms))
+                    for i in range(j)]
+
+    corr_vals = []
+    for pair in unique_pairs:
+        inter_one = list(set(articles[terms[pair[0]]])
+                         & set(articles[terms[pair[1]]]))
+
+        inter_two = list(set(articles[terms[pair[1]]])
+                         & set(articles[terms[pair[0]]]))
+
+        corr_vals.append([terms[pair[0]], terms[pair[1]],
+                          max(1.0 * len(inter_one) /
+                              len(articles[terms[pair[0]]]),
+
+                              1.0 * len(inter_two) /
+                              len(articles[terms[pair[1]]]))])
     keys = set([])
 
-    for x in data:
+    for x in corr_vals:
         keys.add(x[0])
         keys.add(x[1])
 
@@ -251,7 +304,7 @@ def save_corr_matrix(fn, data):
 
     corr = np.identity(n) * 1.0
 
-    for rec in data:
+    for rec in corr_vals:
         x = d[rec[0]]
         y = d[rec[1]]
         corr[y][x] = rec[2]
@@ -259,31 +312,26 @@ def save_corr_matrix(fn, data):
 
     inv_d = {v: k for k, v in d.iteritems()}
 
-    with open(fn, "w") as table:
-        table.write("sep=,\n")
+    table = list()
+    table.append([""] + inv_d.values())
 
-        table.write(",")
+    for y in range(n):
+        row = [round(corr[x, y], 3) for x in range(n)]
+        table.append([inv_d[y]] + row)
 
-        for j, key in enumerate(inv_d.keys()):
+    return SingleTable(vol + "/terms_similar", table)
 
-            if key < n - 1:
-                table.write("{},".format(inv_d[key]))
-            else:
-                table.write("{}".format(inv_d[key]))
 
-        table.write("\n")
+@save_csv(stat_path)
+def calc_unique(terms, articles, unique_articles):
+    table = [["term", "n", "unique"]]
 
-        for y in range(n):
-            table.write("{},".format(inv_d[y]))
+    for p in range(len(terms)):
+        table.append([terms[p],
+                      len(unique_articles[p]),
+                      round(1.0 * len(unique_articles[p]) / len(articles[terms[p]]), 2)])
 
-            for x in range(n):
-
-                if x < n - 1:
-                    table.write("{},".format(round(corr[x, y], 3)))
-                else:
-                    table.write("{}".format(round(corr[x, y], 3)))
-
-            table.write("\n")
+    return SingleTable(vol + "/terms_unique", table)
 
 
 def check_dir(path):
@@ -291,7 +339,7 @@ def check_dir(path):
         os.makedirs(path)
 
 
-def main(section, year, month): # FIXME: too large function
+def main(section, year, month):
 
     terms = get_lines("../topics.txt")
 
@@ -319,37 +367,9 @@ def main(section, year, month): # FIXME: too large function
                                            - int(check_unrelevant)
                                            * len(unique_articles[-1])) / n_articles, 2)
 
-    with open("{}terms_unique.csv".format(dest_path), "w") as file:
+    calc_unique(terms, articles, unique_articles)
 
-        file.write("sep=,\n")
-        file.write("term,n,unique\n")
-
-        for p in range(len(terms)):
-            file.write("{},{},{}\n".format(terms[p],
-                                           len(unique_articles[p]), \
-
-                                           round(1.0 * len(unique_articles[p]) /
-                                           len(articles[terms[p]]), 2)))
-
-    unique_pairs = [[i, j] for j in range(len(terms))
-                    for i in range(j)]
-
-    corr_vals = []
-    for pair in unique_pairs:
-        inter_one = list(set(articles[terms[pair[0]]])
-                         & set(articles[terms[pair[1]]]))
-
-        inter_two = list(set(articles[terms[pair[1]]])
-                         & set(articles[terms[pair[0]]]))
-
-        corr_vals.append([terms[pair[0]], terms[pair[1]],
-                          max(1.0 * len(inter_one) /
-                              len(articles[terms[pair[0]]]),
-
-                              1.0 * len(inter_two) /
-                              len(articles[terms[pair[1]]]))])
-
-    save_corr_matrix("{}terms_similar.csv".format(dest_path), corr_vals)
+    calc_corr(terms, articles)
 
     topics_texts = []
 
@@ -372,20 +392,9 @@ def main(section, year, month): # FIXME: too large function
         topics_texts = [bigram_transformer[topic_content]
                         for topic_content in topics_texts]
 
-    print "Counting words..."
-    count_base = []
-    for topic_content in topics_texts:
-        cnt_d = sum(map(Counter, topic_content), Counter())
+    print "Counting tf-idf..."
 
-        # python "feature": counting zero string
-        if '' in cnt_d.keys():
-            del cnt_d['']
-
-        count_base.append(dict(cnt_d))
-
-    print "Calculating tf-idf..."
-
-    calc_stat(e_terms, count_base)
+    calc_stat(e_terms, topics_texts)
 
 
 def arg_run():
@@ -394,12 +403,12 @@ def arg_run():
     elif len(argv) > 2:
         print "Error: too many arguments"
     else:
-        global section_path
-        section_path = stat_path + argv[1] + "/"
-
-        s, y, m = argv[1].split(".")
+        global vol
+        vol = argv[1]
+        s, y, m = vol.split(".")
         y, m = int(y), int(m)
         main(s, y, m)
+
 
 if __name__ == "__main__":
     stop_list = get_lines("../stoplist.txt")
