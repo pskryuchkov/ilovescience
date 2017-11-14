@@ -1,5 +1,6 @@
 # texts frequency analysis
 # usage: 'python freq.py cond-mat.16.03'
+
 from collections import defaultdict, Counter
 from gensim.models import Phrases
 from unidecode import unidecode
@@ -341,7 +342,7 @@ def check_dir(path):
 
 def main(section, year, month):
 
-    terms = get_lines("../topics.txt")
+    terms = get_lines("../topics/{}.txt".format(section))
 
     dest_path = stat_path + "{}.{}.{}/".format(section,
                                               str(year).zfill(2),

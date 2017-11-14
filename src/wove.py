@@ -25,7 +25,7 @@ n_ass = 10
 
 texts_path = "../arxiv/{0}/{1}/{2:02d}/*.txt"
 vec_path = "../stat/word_vec/{0}.{1}.{2:02d}.wordvec"
-topics_path = "../topics.txt"
+topics_path = ""
 
 
 def ascii_normalize(text):
@@ -182,6 +182,9 @@ def arg_run():
 
     s, y, m = argv[1].split(".")
     y, m = int(y), int(m)
+
+    global topics_path
+    topics_path = "../topics/{}.txt".format(s)
 
     if not b_flag and not t_flag:
         # console

@@ -5,6 +5,7 @@ from glob import glob
 from sys import argv
 import logging
 import pickle
+import random
 import os
 import re
 
@@ -69,6 +70,7 @@ def calculate_keys(vol, n_top, n_pass, cache_corpus=False,
 
     print("Searching for bigrams...")
     bigram_transformer = Phrases(texts, min_count=10)
+
     texts = bigram_transformer[texts]
 
     print("Building corpus..")
@@ -96,37 +98,64 @@ def calculate_keys(vol, n_top, n_pass, cache_corpus=False,
     return lda
 
 
-def topics(arxiv, n_top=30, n_pass=30):
+def topics(arxiv, n_top=30, n_pass=30, short_keylist=True, choice="r"):
     lda = calculate_keys(arxiv, n_top, n_pass)
 
-    report = open("../stat/lda/{0}.{1}.{2}.keys.csv".format(arxiv.section,
-                                                       arxiv.year, arxiv.month), "w+")
-    report.write("sep=,\n")
-
-    for k, record in enumerate(lda.show_topics(num_topics=40, num_words=12)):
+    table = []
+    for record in lda.show_topics(num_topics=n_top, num_words=12):
         data = record[1].split(" + ")
-        report.write("topic #{}\n".format(k + 1))
 
-        for sub_record in data:
-            weight, word = sub_record.split("*")
-            report.write("{0},{1}\n".format(weight, word[1:-1]))
+        topic = []
+        for s_record in data:
+            weight, word = s_record.split("*")
+            topic.append([weight, word[1:-1]])
 
-    report.close()
+        table.append(topic)
+
+    if short_keylist:
+        with open("../topics/{}.txt".format(arxiv.section), "w") as f:
+            for topic in table:
+                if choice == "r":
+                    choice = random.choice(topic)
+                elif choice == "f":
+                    choice = topic[0]
+
+                f.write("{}\n".format(choice[1]))
+    else:
+        report = open("../stat/lda/{0}.{1}.{2}.keys.csv".format(arxiv.section,
+                                                           arxiv.year, arxiv.month), "w+")
+        report.write("sep=,\n")
+
+        for c, topic in enumerate(table):
+            report.write("topic #{}\n".format(c + 1))
+
+            for word in topic:
+                report.write("{0},{1}\n".format(word[0], word[1]))
+
+        report.close()
 
 
 def arg_run():
     if len(argv) < 2:
         print "Error: too few arguments"
-    elif len(argv) > 2:
+    elif len(argv) > 3:
         print "Error: too many arguments"
     else:
         section, s_year, s_month = argv[1].split(".")
         year, month = int(s_year), int(s_month)
+        n_topics = 30
+        n_passes = 30
+
+        short_flag = False
+        if "-s" in argv:
+            short_flag = True
+            n_topics = 10
+            n_passes = 15
 
         arxiv_vol = Volume(section, year, month)
 
         # optimal values: n_topics and n_passes ~ 30
-        topics(arxiv_vol, 30, 30)
+        topics(arxiv_vol, n_topics, n_passes, short_keylist=short_flag)
 
 if __name__ == "__main__":
     stoplist = [x.rstrip() for x in open("../stoplist.txt", "r").readlines()]
