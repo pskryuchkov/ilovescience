@@ -2,12 +2,23 @@ from collections import Counter
 from pprint import pprint
 from glob import glob
 from sys import argv
+import errno
 import re
+import os
 
 n_articles = 1500
 n_top = 30
 stat_path = "../stat/references/"
 write_reports = (n_articles < 500)
+
+
+def create_dir(dn):
+    if not os.path.exists(dn):
+        try:
+            os.makedirs(dn)
+        except OSError as exc:
+            if exc.errno != errno.EEXIST:
+                raise
 
 
 def starts_with(str, sub_str):
@@ -183,6 +194,8 @@ def arg_run():
     else:
         s, y, m = argv[1].split(".")
         y, m = int(y), int(m)
+
+        create_dir(stat_path)
         main(s, y, m)
 
 if __name__ == "__main__":

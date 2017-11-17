@@ -6,9 +6,12 @@ from sys import argv
 import logging
 import pickle
 import random
+import errno
 import os
 import re
 
+
+stat_path = "../stat/lda/"
 
 class Volume:
     n_articles = 1000
@@ -22,6 +25,15 @@ class Volume:
 def ascii_normalize(text):
     # .decode("ascii", "ignore")
     return [unidecode(line.decode("utf-8")) for line in text]
+
+
+def create_dir(dn):
+    if not os.path.exists(dn):
+        try:
+            os.makedirs(dn)
+        except OSError as exc:
+            if exc.errno != errno.EEXIST:
+                raise
 
 
 def line_filter(text, min_length=4):
@@ -88,12 +100,12 @@ def calculate_keys(vol, n_top, n_pass, cache_corpus=False,
                        workers=4, passes=n_pass, iterations=400, eval_every=None)
 
     if cache_corpus:
-        with open("../stat/lda/{}.{}.{}.corpus".format(vol.section,
+        with open(stat_path + "{0}.{1}.{2}.corpus".format(vol.section,
                                                        vol.year, vol.month), 'wb') as f:
             pickle.dump(corpus, f)
 
     if cache_model:
-        lda.save("../stat/lda/{0}.{1}.{2}.{3}.lda".format(vol.section,
+        lda.save(stat_path + "{0}.{1}.{2}.{3}.lda".format(vol.section,
                                                           vol.year, vol.month, n_pass))
     return lda
 
@@ -122,7 +134,7 @@ def topics(arxiv, n_top=30, n_pass=30, short_keylist=True, choice="r"):
 
                 f.write("{}\n".format(choice[1]))
     else:
-        report = open("../stat/lda/{0}.{1}.{2}.keys.csv".format(arxiv.section,
+        report = open(stat_path + "{0}.{1}.{2}.keys.csv".format(arxiv.section,
                                                            arxiv.year, arxiv.month), "w+")
         report.write("sep=,\n")
 
@@ -153,6 +165,7 @@ def arg_run():
             n_passes = 15
 
         arxiv_vol = Volume(section, year, month)
+        create_dir(stat_path)
 
         # optimal values: n_topics and n_passes ~ 30
         topics(arxiv_vol, n_topics, n_passes, short_keylist=short_flag)

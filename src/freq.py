@@ -7,6 +7,7 @@ from unidecode import unidecode
 from glob import glob
 from sys import argv
 import numpy as np
+import errno
 import re
 import os
 
@@ -52,6 +53,15 @@ class MultiTable:
                                        reverse=reverse))
 
         return MultiTable(self.name, sorted_table, self.labels)
+
+
+def create_dir(dn):
+    if not os.path.exists(dn):
+        try:
+            os.makedirs(dn)
+        except OSError as exc:
+            if exc.errno != errno.EEXIST:
+                raise
 
 
 def save_csv(path="", sep=","):
@@ -408,6 +418,8 @@ def arg_run():
         vol = argv[1]
         s, y, m = vol.split(".")
         y, m = int(y), int(m)
+
+        create_dir(stat_path)
         main(s, y, m)
 
 

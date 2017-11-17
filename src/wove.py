@@ -13,19 +13,31 @@ from gensim.models import Word2Vec, Phrases
 from unidecode import unidecode
 from glob import glob
 from sys import argv
-import argparse
 import logging
+import errno
+import os
 import re
 
 min_count = 10
 size = 300
 window = 10
+
 n_articles = 2000
 n_ass = 10
 
+stat_path = "../stat/word_vec/"
 texts_path = "../arxiv/{0}/{1}/{2:02d}/*.txt"
-vec_path = "../stat/word_vec/{0}.{1}.{2:02d}.wordvec"
+vec_path = stat_path + "{0}.{1}.{2:02d}.wordvec"
 topics_path = ""
+
+
+def create_dir(dn):
+    if not os.path.exists(dn):
+        try:
+            os.makedirs(dn)
+        except OSError as exc:
+            if exc.errno != errno.EEXIST:
+                raise
 
 
 def ascii_normalize(text):
@@ -200,9 +212,13 @@ def arg_run():
             topics_info(vec_path.format(s, y, m))
 
 
+
+
 if __name__ == "__main__":
     # initialization
     stoplist = get_lines("extra/stoplist.txt")
+    create_dir(stat_path)
+
     arg_run()
 
 # TODO: discover relations
