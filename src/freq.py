@@ -412,6 +412,6 @@ def arg_run():
 
 
 if __name__ == "__main__":
-    stop_list = get_lines("../stoplist.txt")
+    stop_list = get_lines("extra/stoplist.txt")
     arg_run()
 

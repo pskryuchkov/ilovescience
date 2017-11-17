@@ -158,5 +158,5 @@ def arg_run():
         topics(arxiv_vol, n_topics, n_passes, short_keylist=short_flag)
 
 if __name__ == "__main__":
-    stoplist = [x.rstrip() for x in open("../stoplist.txt", "r").readlines()]
+    stoplist = [x.rstrip() for x in open("extra/stoplist.txt", "r").readlines()]
     arg_run()

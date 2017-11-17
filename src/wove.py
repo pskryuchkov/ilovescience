@@ -202,7 +202,7 @@ def arg_run():
 
 if __name__ == "__main__":
     # initialization
-    stoplist = get_lines("../stoplist.txt")
+    stoplist = get_lines("extra/stoplist.txt")
     arg_run()
 
 # TODO: discover relations
