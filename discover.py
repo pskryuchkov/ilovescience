@@ -7,9 +7,17 @@ elif len(argv) > 3:
     print "Error: too many arguments"
 else:
     section = argv[1]
+    prefix = "python -W ignore src/"
+    postfix = ""
+    # FIXME: prefix = "./"
 
-    os.system("python lada.py {} -s".format(section))
-    os.system("python freq.py {}".format(section))
-    os.system("python cite.py {}".format(section))
-    os.system("python wove.py {} -b".format(section))
-    os.system("python lada.py {}".format(section))
+    print("STAGE #1")
+    os.system("{}lada.py {} -s {}".format(prefix, section, postfix))
+    print("STAGE #2")
+    os.system("{}freq.py {} {}".format(prefix, section, postfix))
+    print("STAGE #3")
+    os.system("{}cite.py {} {}".format(prefix, section, postfix))
+    print("STAGE #4")
+    os.system("{}wove.py {} -b {}".format(prefix, section, postfix))
+    print("STAGE #5")
+    os.system("{}lada.py {} {}".format(prefix, section, postfix))
