@@ -7,9 +7,11 @@
 
 from collections import Counter
 from pprint import pprint
-from glob import glob
 from sys import argv
 from os import chdir
+import fnmatch
+import random
+import pickle
 import errno
 import re
 import os
@@ -20,6 +22,8 @@ n_articles_debug = 100
 n_top = 30
 stat_path = "../stat/references/"
 write_reports = (n_articles < 500)
+
+volume = None
 
 
 def create_dir(dn):
@@ -82,11 +86,33 @@ def extract_journal_info(ref):
     return journal
 
 
-def main(s, y, m):
+def random_glob(path, n_files, mask="*.txt"):
+    file_list = []
+
+    for root, dirnames, filenames in os.walk(path):
+        for filename in fnmatch.filter(filenames, mask):
+            file_list.append(os.path.join(root, filename))
+
+    random.shuffle(file_list)
+    return file_list[:n_files]
+
+
+def main():
     print "Extracting refs..."
 
     global_ref_list = []
-    for g, file in enumerate(glob("../arxiv/{0}/{1}/{2:02d}/*.txt".format(s, y, m))[:n_articles]):
+
+    section, year = volume.split(".")
+    texts_path = "../arxiv/{0}/{1}/".format(section, year)
+
+    if not os.path.isfile('extra/{}.cache'.format(volume)):
+        files_list = random_glob(texts_path, n_articles)
+    else:
+        with open('extra/{}.cache'.format(volume), 'rb') as f:
+            d = pickle.load(f)
+            files_list = d.keys()
+
+    for g, file in enumerate(files_list):
         content = open(file, "r").readlines()
 
         reflines = []
@@ -202,15 +228,18 @@ def arg_run():
     elif len(argv) > 3:
         print "Error: too many arguments"
     else:
-        s, y, m = argv[1].split(".")
-        y, m = int(y), int(m)
+        global volume
+        volume = argv[1]
+
+        s, y = volume.split(".")
+        y = int(y)
 
         if "-d" in argv:
             global n_articles
             n_articles = n_articles_debug
 
         create_dir(stat_path)
-        main(s, y, m)
+        main()
 
 if __name__ == "__main__":
     chdir(os.path.dirname(os.path.realpath(__file__)))

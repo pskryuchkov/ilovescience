@@ -33,8 +33,7 @@
    "source": [
     "section = '{section}'\n",
     "year = {year}\n",
-    "month = {month}\n",
-    "volume = \"{}.{}.{}\".format(section, str(year).zfill(2), str(month).zfill(2))"
+    "volume = \"{}.{}\".format(section, str(year).zfill(2))"
    ]
   },
   {

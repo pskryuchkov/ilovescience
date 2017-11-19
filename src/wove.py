@@ -16,11 +16,12 @@
 
 from gensim.models import Word2Vec, Phrases
 from unidecode import unidecode
-from glob import glob
 from sys import argv
 from os import chdir
+import fnmatch
 import logging
 import pickle
+import random
 import errno
 import os
 import re
@@ -33,9 +34,10 @@ n_articles = 1000
 n_articles_debug = 100
 n_ass = 10
 
+# FIXME
 stat_path = "../stat/word_vec/"
 texts_path = "../arxiv/{0}/{1}/{2:02d}/*.txt"
-vec_path = stat_path + "{0}.{1}.{2:02d}.wordvec"
+vec_path = stat_path + "{0}.wordvec"
 topics_path = ""
 
 volume = None
@@ -83,8 +85,10 @@ def line_filter(text, min_length=3):  # FIXME
 
     return filtered
 
+
 def fn_pure(fn):
     return os.path.splitext(os.path.basename(fn))[0]
+
 
 def prepare_sentences(file_list, n_articles):
     base = []
@@ -92,20 +96,25 @@ def prepare_sentences(file_list, n_articles):
 
     if not os.path.isfile('extra/{}.cache'.format(volume)):
         for g, file in enumerate(file_list[:n_articles]):
+
             print "{}/{} {}".format(g + 1, n_articles, fn_pure(file))
+
             text = " ".join(line_filter(
                 ascii_normalize(
                     open(file, "r").readlines()))).lower().split(".")
+
             d[file] = text
             base += [x.split() for x in text]
 
         with open('extra/{}.cache'.format(volume), 'wb') as f:
             pickle.dump(d, f)
+
     else:
+
         with open('extra/{}.cache'.format(volume), 'rb') as f:
             d = pickle.load(f)
 
-        for g, file in enumerate(file_list[:n_articles]):
+        for g, file in enumerate(d.keys()):
             print "{}/{} {}".format(g + 1, n_articles, fn_pure(file))
             text = d[file]
 
@@ -113,14 +122,33 @@ def prepare_sentences(file_list, n_articles):
     return base
 
 
-def build_word_vec(path, show_log = True):
-    sentences = prepare_sentences(glob(path), n_articles)
+def random_glob(path, n_files, mask="*.txt"):
+    file_list = []
+
+    for root, dirnames, filenames in os.walk(path):
+        for filename in fnmatch.filter(filenames, mask):
+            file_list.append(os.path.join(root, filename))
+
+    random.shuffle(file_list)
+    return file_list[:n_files]
+
+
+def build_word_vec(show_log=True):
+
+    section, year = volume.split(".")
+    texts_path = "../arxiv/{0}/{1}/".format(section, year)
+
+    files_list = random_glob(texts_path, n_articles)
+    sentences = prepare_sentences(files_list, n_articles)
+
     if show_log:
         logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
                             level=logging.INFO)
+
     # FIXME: bigram transformer returns empty list 
     #bigram_transformer = Phrases(sentences)
     #return Word2Vec(bigram_transformer[sentences], min_count=min_count, size=size, window=window, workers=4)
+
     return Word2Vec(sentences, min_count=min_count, size=size, window=window, workers=4)
 
 def get_lines(fn):
@@ -216,30 +244,30 @@ def arg_run():
         global n_articles
         n_articles = n_articles_debug
 
-    b_flag = "-b" in argv[2]
-    t_flag = "-t" in argv[2]
-
-    s, y, m = argv[1].split(".")
-    y, m = int(y), int(m)
+    b_flag = "-b" in argv
+    t_flag = "-t" in argv
 
     global volume
     volume = argv[1]
+
+    s, y = volume.split(".")
+    y = int(y)
 
     global topics_path
     topics_path = "../topics/{}.txt".format(s)
 
     if not b_flag and not t_flag:
         # console
-        print "Word2vec on arxiv {}.{:02d}".format(y, m)
-        console(vec_path.format(s, y, m))
+        print "Word2vec on arxiv {}.{:02d}".format(y)
+        console(vec_path.format(volume))
     else:
         if b_flag:
             # build
-            model = build_word_vec(texts_path.format(s, y, m))
-            model.save(vec_path.format(s, y, m))
+            model = build_word_vec()
+            model.save(vec_path.format(volume))
         elif t_flag:
             # topic info
-            topics_info(vec_path.format(s, y, m))
+            topics_info(vec_path.format(volume))
 
 
 if __name__ == "__main__":

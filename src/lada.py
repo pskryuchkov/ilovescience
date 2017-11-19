@@ -8,22 +8,24 @@
 from gensim.models import LdaMulticore, Phrases
 from unidecode import unidecode
 from gensim import corpora
-from glob import glob
 from sys import argv
 from os import chdir
 import os.path
 import logging
+import fnmatch
 import pickle
 import random
 import errno
 import os
 import re
 
+
 n_articles = 1000
 n_articles_debug = 100
 
 stat_path = "../stat/lda/"
 volume = None
+
 
 class Volume:
     def __init__(self, section, year, month):
@@ -87,7 +89,7 @@ def prepare_sentences(file_list, n_articles):
         with open('extra/{}.cache'.format(volume), 'rb') as f:
             d = pickle.load(f)
 
-        for g, file in enumerate(file_list[:n_articles]):
+        for g, file in enumerate(d.keys()):
             print "{}/{} {}".format(g + 1, n_articles, fn_pure(file))
             text = d[file]
 
@@ -95,15 +97,28 @@ def prepare_sentences(file_list, n_articles):
     return base
 
 
+def random_glob(path, n_files, mask="*.txt"):
+    file_list = []
+
+    for root, dirnames, filenames in os.walk(path):
+        for filename in fnmatch.filter(filenames, mask):
+            file_list.append(os.path.join(root, filename))
+
+    random.shuffle(file_list)
+    return file_list[:n_files]
+
+
 def calculate_keys(vol, n_top, n_pass, cache_corpus=False,
                    cache_model=False):
-    texts_path = "../arxiv/{0}/{1}/{2}/".format(vol.section,
-                                                     vol.year, vol.month)
+
+    texts_path = "../arxiv/{0}/{1}/".format(vol.section, vol.year)
 
     if not os.path.isdir(texts_path):
         raise Exception('There is no such path: {}'.format(texts_path))
 
-    texts = prepare_sentences(glob(texts_path + "*.txt"), n_articles)
+    files_list = random_glob(texts_path, n_articles)
+
+    texts = prepare_sentences(files_list, n_articles)
 
     print("Searching for bigrams...")
 
@@ -126,13 +141,11 @@ def calculate_keys(vol, n_top, n_pass, cache_corpus=False,
                        workers=4, passes=n_pass, iterations=400, eval_every=None)
 
     if cache_corpus:
-        with open(stat_path + "{0}.{1}.{2}.corpus".format(vol.section,
-                                                       vol.year, vol.month), 'wb') as f:
+        with open(stat_path + "{0}.corpus".format(volume), 'wb') as f:
             pickle.dump(corpus, f)
 
     if cache_model:
-        lda.save(stat_path + "{0}.{1}.{2}.{3}.lda".format(vol.section,
-                                                          vol.year, vol.month, n_pass))
+        lda.save(stat_path + "{0}.{1}.lda".format(volume, n_pass))
     return lda
 
 
@@ -159,8 +172,7 @@ def topics(arxiv, n_top=30, n_pass=30, short_keylist=True, choice_mode="f"):
                 elif choice_mode == "f":
                     f.write("{}\n".format(topic[0][1]))
     else:
-        report = open(stat_path + "{0}.{1}.{2}.keys.csv".format(arxiv.section,
-                                                           arxiv.year, arxiv.month), "w+")
+        report = open(stat_path + "{0}.keys.csv".format(volume), "w+")
         report.write("sep=,\n")
 
         for c, topic in enumerate(table):
@@ -185,8 +197,10 @@ def arg_run():
         global volume
         volume = argv[1]
 
-        section, s_year, s_month = volume.split(".")
-        year, month = int(s_year), int(s_month)
+        section, year_s = volume.split(".")
+        year = int(year_s)
+        arxiv_vol = Volume(section, year, 0)
+
         n_topics = 30
         n_passes = 30
 
@@ -194,9 +208,8 @@ def arg_run():
         if "-s" in argv:
             short_flag = True
             n_topics = 10
-            n_passes = 5
+            n_passes = 15
 
-        arxiv_vol = Volume(section, year, month)
         create_dir(stat_path)
 
         # optimal values: n_topics and n_passes ~ 30

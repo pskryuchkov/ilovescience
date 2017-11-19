@@ -8,11 +8,12 @@
 from collections import defaultdict, Counter
 from gensim.models import Phrases
 from unidecode import unidecode
-from glob import glob
 from sys import argv
 from os import chdir
 import numpy as np
+import fnmatch
 import pickle
+import random
 import errno
 import re
 import os
@@ -26,6 +27,13 @@ n_articles_debug = 100
 
 check_unrelevant = True
 stat_path = "../stat/frequency/"
+
+
+class Volume:
+    def __init__(self, section, year, month):
+        self.section = section
+        self.year = str(year).zfill(2)
+        self.month = str(month).zfill(2)
 
 
 class SingleTable:
@@ -164,18 +172,6 @@ def file_counter(lines, term):
     return cnt
 
 
-def base_counter(terms, path):
-    counter_d = dict.fromkeys(terms, 0)
-
-    for i, file in enumerate(glob(path+"*.txt")):
-        text = open(file).readlines()
-
-        for term in terms:
-            counter_d[term] += file_counter(text, term)
-
-    return counter_d
-
-
 def get_lines(fn):
     return [line.strip() for line in open(fn, "r").readlines()]
 
@@ -189,7 +185,14 @@ def group_articles(path, terms_l, min_cnt=5,
 
     articles_d = defaultdict(list)
 
-    for i, file in enumerate(glob(path+"*.txt")[:n_articles]):
+    if not os.path.isfile('extra/{}.cache'.format(volume)):
+        files_list = random_glob(path, n_articles)
+    else:
+        with open('extra/{}.cache'.format(volume), 'rb') as f:
+            d = pickle.load(f)
+            files_list = d.keys()
+
+    for i, file in enumerate(files_list):
         is_relevant = False
         text = open(file).readlines()
 
@@ -203,7 +206,7 @@ def group_articles(path, terms_l, min_cnt=5,
         if return_unrelevant and not is_relevant:
             articles_d["uncovered"].append(file)
 
-    return articles_d, len(glob(path+"*.txt"))
+    return articles_d
 
 
 def get_unique_articles(articles, terms, articles_dict):     # FIXME
@@ -353,19 +356,28 @@ def calc_unique(terms, articles, unique_articles):
 
     return SingleTable(volume + "/terms_unique", table)
 
+
 # FIXME: remove this
 def check_dir(path):
     if not os.path.isdir(path):
         os.makedirs(path)
 
 
-def main(section, year, month):
+def random_glob(path, n_files, mask="*.txt"):
+    file_list = []
 
-    terms = get_lines("../topics/{}.txt".format(section))
+    for root, dirnames, filenames in os.walk(path):
+        for filename in fnmatch.filter(filenames, mask):
+            file_list.append(os.path.join(root, filename))
 
-    dest_path = stat_path + "{}.{}.{}/".format(section,
-                                              str(year).zfill(2),
-                                              str(month).zfill(2))
+    random.shuffle(file_list)
+    return file_list[:n_files]
+
+
+def main(arxiv):
+    terms = get_lines("../topics/{}.txt".format(arxiv.section))
+
+    dest_path = stat_path + "{}/".format(volume)
     check_dir(dest_path)
 
     if check_unrelevant:
@@ -374,9 +386,9 @@ def main(section, year, month):
         e_terms = terms
 
     print "Getting relevant articles..."
-    articles, n_articles = group_articles("../arxiv/{0}/{1}/{2:02d}/"
-                                          .format(section, year, month),
-                                          terms, return_unrelevant=check_unrelevant)
+    articles = group_articles("../arxiv/{0}/{1}/"
+                                .format(arxiv.section, arxiv.year),
+                                    terms, return_unrelevant=check_unrelevant)
 
     unique_articles = get_unique_articles(articles, e_terms, articles)
 
@@ -396,12 +408,13 @@ def main(section, year, month):
     for g in range(len(unique_articles)):
         topic_sentences = []
 
+        # FIXME
         if not os.path.isfile('extra/{}.cache'.format(volume)):
             for file in unique_articles[g]:
                 text = " ".join(line_filter(
                                     ascii_normalize(
                                         open(file, "r").readlines()))).split(" ")
-                print len(text)
+
                 topic_sentences.append(text)
         else:
             d = {}
@@ -442,11 +455,17 @@ def arg_run():
             n_articles = n_articles_debug
 
         volume = argv[1]
-        s, y, m = volume.split(".")
-        y, m = int(y), int(m)
+        #s, y, m = volume.split(".")
+        #y, m = int(y), int(m)
+
+        section, year_s = volume.split(".")
+        year = int(year_s)
+
+        arxiv_vol = Volume(section, year, 0)
 
         create_dir(stat_path)
-        main(s, y, m)
+        #main(s, y, m)
+        main(arxiv_vol)
 
 
 if __name__ == "__main__":
