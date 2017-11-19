@@ -1,19 +1,26 @@
-# word2vec algorithm applying to scientific articles base
-#
-# calculate word vectors
+# Word2vec algorithm applying to scientific texts
+
+# Calculating word vectors
 # python wove.py cond-mat.16.03 -b
-#
-# topics word vectors info
+
+# Topics word vectors info
 # python wove.py cond-mat.16.03 -t
-#
-# word2vec console
+
+# Word2vec console (pre-calclulated wordvectors required)
 # python wove.py cond-mat.16.03
+
+# FIXME usage: './wove.py cond-mat.17'
+
+# Tested for Anaconda Python 2.7.13
+# If script doesn't work, check your Python interpteter version.
 
 from gensim.models import Word2Vec, Phrases
 from unidecode import unidecode
 from glob import glob
 from sys import argv
+from os import chdir
 import logging
+import pickle
 import errno
 import os
 import re
@@ -22,7 +29,8 @@ min_count = 10
 size = 300
 window = 10
 
-n_articles = 2000
+n_articles = 1000
+n_articles_debug = 100
 n_ass = 10
 
 stat_path = "../stat/word_vec/"
@@ -30,6 +38,7 @@ texts_path = "../arxiv/{0}/{1}/{2:02d}/*.txt"
 vec_path = stat_path + "{0}.{1}.{2:02d}.wordvec"
 topics_path = ""
 
+volume = None
 
 def create_dir(dn):
     if not os.path.exists(dn):
@@ -74,27 +83,45 @@ def line_filter(text, min_length=3):  # FIXME
 
     return filtered
 
+def fn_pure(fn):
+    return os.path.splitext(os.path.basename(fn))[0]
 
-def prepare_sentences(file_list, n_articles=n_articles):
+def prepare_sentences(file_list, n_articles):
     base = []
-    for g, file in enumerate(file_list[:n_articles]):
-        print file
-        text = " ".join(line_filter(
-                            ascii_normalize(
-                                open(file, "r").readlines()))).lower().split(".")
+    d = {}
 
-        base += [x.split() for x in text]
+    if not os.path.isfile('extra/{}.cache'.format(volume)):
+        for g, file in enumerate(file_list[:n_articles]):
+            print "{}/{} {}".format(g + 1, n_articles, fn_pure(file))
+            text = " ".join(line_filter(
+                ascii_normalize(
+                    open(file, "r").readlines()))).lower().split(".")
+            d[file] = text
+            base += [x.split() for x in text]
+
+        with open('extra/{}.cache'.format(volume), 'wb') as f:
+            pickle.dump(d, f)
+    else:
+        with open('extra/{}.cache'.format(volume), 'rb') as f:
+            d = pickle.load(f)
+
+        for g, file in enumerate(file_list[:n_articles]):
+            print "{}/{} {}".format(g + 1, n_articles, fn_pure(file))
+            text = d[file]
+
+            base += [x.split() for x in text]
     return base
 
 
 def build_word_vec(path, show_log = True):
-    sentences = prepare_sentences(glob(path))
+    sentences = prepare_sentences(glob(path), n_articles)
     if show_log:
         logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
                             level=logging.INFO)
-    bigram_transformer = Phrases(sentences)
-    return Word2Vec(bigram_transformer[sentences], min_count=min_count, size=size, window=window, workers=4)
-
+    # FIXME: bigram transformer returns empty list 
+    #bigram_transformer = Phrases(sentences)
+    #return Word2Vec(bigram_transformer[sentences], min_count=min_count, size=size, window=window, workers=4)
+    return Word2Vec(sentences, min_count=min_count, size=size, window=window, workers=4)
 
 def get_lines(fn):
     return [line.strip() for line in open(fn, "r").readlines()]
@@ -182,18 +209,21 @@ def arg_run():
     if len(argv) < 2:
         raise Exception("Too few arguments")
 
-    if len(argv) > 3:
+    if len(argv) > 4:
         raise Exception("Too many arguments")
 
-    b_flag = False
-    t_flag = False
+    if "-d" in argv:
+        global n_articles
+        n_articles = n_articles_debug
 
-    if len(argv) == 3:
-        b_flag = argv[2] == "-b"
-        t_flag = argv[2] == "-t"
+    b_flag = "-b" in argv[2]
+    t_flag = "-t" in argv[2]
 
     s, y, m = argv[1].split(".")
     y, m = int(y), int(m)
+
+    global volume
+    volume = argv[1]
 
     global topics_path
     topics_path = "../topics/{}.txt".format(s)
@@ -212,10 +242,9 @@ def arg_run():
             topics_info(vec_path.format(s, y, m))
 
 
-
-
 if __name__ == "__main__":
     # initialization
+    chdir(os.path.dirname(os.path.realpath(__file__)))
     stoplist = get_lines("extra/stoplist.txt")
     create_dir(stat_path)
 

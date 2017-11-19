@@ -1,7 +1,10 @@
-# Getting articles from arxiv.org.
-# PDF files are loaded and converted to txt on fly
-# Example of usage: './crawler.py -s cond-mat -y 16 -m 2'
+# Downloading articles from arxiv.org.
+# PDF files after loading converted to txt (on fly)
+# Usage: './load.py -s cond-mat -y 16 -m 2'
+# FIXME usage: './load.py cond-mat.17'
+
 # Articles saved on '../arxiv/<section>/<year>/<month>'
+
 # Tested for Anaconda Python 2.7.13
 # If script doesn't work, check your Python interpteter version.
 
@@ -13,7 +16,7 @@ from pdfminer.pdfpage import PDFPage
 from cStringIO import StringIO
 
 from os.path import isfile, join, splitext, isdir
-from os import listdir, makedirs
+from os import listdir, makedirs, chdir
 import subprocess
 import urllib2
 import signal
@@ -23,6 +26,8 @@ import argparse
 import time
 import re
 
+import socks
+import socket
 
 year = None
 month = None
@@ -183,8 +188,7 @@ def main():
 def handler(signum, frame):
     raise Exception("Timeout")
 
-import socks
-import socket
+
 def create_connection(address, timeout=None, source_address=None):
     sock = socks.socksocket()
     sock.connect(address)
@@ -197,4 +201,5 @@ socket.socket = socks.socksocket
 socket.create_connection = create_connection
 
 if __name__ == "__main__":
+    chdir(os.path.dirname(os.path.realpath(__file__)))
     arg_run()

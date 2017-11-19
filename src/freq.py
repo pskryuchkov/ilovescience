@@ -1,21 +1,29 @@
-# texts frequency analysis
-# usage: 'python freq.py cond-mat.16.03'
+# Frequent analisys (with tf-idf). List of topics required (extra/topics.txt)
+# Usage: 'python freq.py cond-mat.16.03'
+# FIXME usage: './freq.py cond-mat.17'
+
+# Tested for Anaconda Python 2.7.13
+# If script doesn't work, check your Python interpteter version.
 
 from collections import defaultdict, Counter
 from gensim.models import Phrases
 from unidecode import unidecode
 from glob import glob
 from sys import argv
+from os import chdir
 import numpy as np
+import pickle
 import errno
 import re
 import os
 
 
-vol = None
-biGram = True
+volume = None
+biGram = False
 n_results = 10
-n_articles = 100
+n_articles = 1000
+n_articles_debug = 100
+
 check_unrelevant = True
 stat_path = "../stat/frequency/"
 
@@ -280,8 +288,9 @@ def calc_stat(labels, topics_texts):
                                   count_dicts[v][key]])
 
         sat_base.append(word_sats)
-
-    return MultiTable(vol + "/topics", sat_base, labels).sort(col_idx=1)
+    #from pprint import pprint
+    #pprint(sat_base)
+    return MultiTable(volume + "/topics", sat_base, labels).sort(col_idx=1)
 
 
 @save_csv(stat_path)
@@ -330,7 +339,7 @@ def calc_corr(terms, articles):
         row = [round(corr[x, y], 3) for x in range(n)]
         table.append([inv_d[y]] + row)
 
-    return SingleTable(vol + "/terms_similar", table)
+    return SingleTable(volume + "/terms_similar", table)
 
 
 @save_csv(stat_path)
@@ -342,9 +351,9 @@ def calc_unique(terms, articles, unique_articles):
                       len(unique_articles[p]),
                       round(1.0 * len(unique_articles[p]) / len(articles[terms[p]]), 2)])
 
-    return SingleTable(vol + "/terms_unique", table)
+    return SingleTable(volume + "/terms_unique", table)
 
-
+# FIXME: remove this
 def check_dir(path):
     if not os.path.isdir(path):
         os.makedirs(path)
@@ -387,23 +396,35 @@ def main(section, year, month):
     for g in range(len(unique_articles)):
         topic_sentences = []
 
-        for file in unique_articles[g]:
-            text = " ".join(line_filter(
-                                ascii_normalize(
-                                    open(file, "r").readlines()))).split(" ")
-            topic_sentences.append(text)
+        if not os.path.isfile('extra/{}.cache'.format(volume)):
+            for file in unique_articles[g]:
+                text = " ".join(line_filter(
+                                    ascii_normalize(
+                                        open(file, "r").readlines()))).split(" ")
+                print len(text)
+                topic_sentences.append(text)
+        else:
+            d = {}
+            with open('extra/{}.cache'.format(volume), 'rb') as f:
+                d = pickle.load(f)
+
+            for file in unique_articles[g]:
+                text = d[file][0].split()
+                topic_sentences.append(text)
 
         topics_texts.append(topic_sentences)
 
     if biGram:
         print("Searching for bigrams...")
+        
+        # FIXME: bigram transformer returns empty list 
         bigram_transformer = Phrases([sentence for topic_content in topics_texts
                                                 for sentence in topic_content])
 
         topics_texts = [bigram_transformer[topic_content]
                         for topic_content in topics_texts]
 
-    print "Counting tf-idf..."
+    print "Calculating tf-idf..."
 
     calc_stat(e_terms, topics_texts)
 
@@ -411,12 +432,17 @@ def main(section, year, month):
 def arg_run():
     if len(argv) < 2:
         print "Error: too few arguments"
-    elif len(argv) > 2:
+    elif len(argv) > 3:
         print "Error: too many arguments"
     else:
-        global vol
-        vol = argv[1]
-        s, y, m = vol.split(".")
+        global volume
+
+        if "-d" in argv:
+            global n_articles
+            n_articles = n_articles_debug
+
+        volume = argv[1]
+        s, y, m = volume.split(".")
         y, m = int(y), int(m)
 
         create_dir(stat_path)
@@ -424,6 +450,7 @@ def arg_run():
 
 
 if __name__ == "__main__":
+    chdir(os.path.dirname(os.path.realpath(__file__)))
     stop_list = get_lines("extra/stoplist.txt")
     arg_run()
 

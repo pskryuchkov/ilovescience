@@ -27,13 +27,13 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 2,
+   "execution_count": null,
    "metadata": {},
    "outputs": [],
    "source": [
-    "section = 'cond-mat'\n",
-    "year = 16\n",
-    "month = 3\n",
+    "section = '{section}'\n",
+    "year = {year}\n",
+    "month = {month}\n",
     "volume = \"{}.{}.{}\".format(section, str(year).zfill(2), str(month).zfill(2))"
    ]
   },

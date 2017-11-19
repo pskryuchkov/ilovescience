@@ -1,7 +1,6 @@
 from networkx.drawing.nx_agraph import graphviz_layout
 from openpyxl import load_workbook
 from gensim.models import Word2Vec
-import matplotlib.pyplot as plt
 from matplotlib import cm
 import networkx as nx
 from numpy import *
@@ -269,7 +268,7 @@ def draw_barchart(volume, n_keys = 10, n_row = 5, n_col = 3):
                               horizontal_spacing = 0.15, vertical_spacing=0.05,
                               subplot_titles=[x[0][0] for x in table[:n_charts]])
 
-    for topic_words in table:
+    for topic_words in table[:n_charts]:
         add_bar(fig, topic_words, n_topics, n_keys, n_row, n_col)
 
     fig['layout'].update(height=750, width=750, showlegend=False)

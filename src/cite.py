@@ -1,12 +1,22 @@
+# This script counts references and show most citied articles
+# Usage: 'python freq.py cond-mat.16.03'
+# FIXME usage: './freq.py cond-mat.17'
+
+# Tested for Anaconda Python 2.7.13
+# If script doesn't work, check your Python interpteter version.
+
 from collections import Counter
 from pprint import pprint
 from glob import glob
 from sys import argv
+from os import chdir
 import errno
 import re
 import os
 
-n_articles = 1500
+n_articles = 1000
+n_articles_debug = 100
+
 n_top = 30
 stat_path = "../stat/references/"
 write_reports = (n_articles < 500)
@@ -189,14 +199,19 @@ def main(s, y, m):
 def arg_run():
     if len(argv) < 2:
         print "Error: too few arguments"
-    elif len(argv) > 2:
+    elif len(argv) > 3:
         print "Error: too many arguments"
     else:
         s, y, m = argv[1].split(".")
         y, m = int(y), int(m)
 
+        if "-d" in argv:
+            global n_articles
+            n_articles = n_articles_debug
+
         create_dir(stat_path)
         main(s, y, m)
 
 if __name__ == "__main__":
+    chdir(os.path.dirname(os.path.realpath(__file__)))
     arg_run()
