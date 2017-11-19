@@ -125,3 +125,6 @@ so
 the
 having
 once
+http
+arxiv
+phys
