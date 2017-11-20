@@ -1,4 +1,5 @@
 from networkx.drawing.nx_agraph import graphviz_layout
+from IPython.display import display, Markdown
 from openpyxl import load_workbook
 from gensim.models import Word2Vec
 from matplotlib import cm
@@ -12,6 +13,11 @@ import csv
 
 
 chart_count = 0
+cite_table = \
+"""
+| {0}Author(s){1} | {0}Year{1} | {0}Ref. count{1} |
+| --- | --- | --- |
+""".format("<center>", "<center>")
 
 
 def replics(model, target_word, topn=10):
@@ -196,6 +202,11 @@ def draw_scatter(volume):
     data = []
     for name in sheet_list:
         ws = wb[name]
+
+        if min(ws.max_row, ws.max_column) <= 1:
+            print("Warning: empty sheet '{}'".format(name))
+            continue
+
         table = [[line[0].value, line[1].value, line[2].value] for line in
                     zip(list(ws.columns)[0], list(ws.columns)[1], list(ws.columns)[2])]
 
@@ -273,3 +284,22 @@ def draw_barchart(volume, n_keys = 10, n_row = 5, n_col = 3):
 
     fig['layout'].update(height=750, width=750, showlegend=False)
     py.iplot(fig, show_link=False);
+
+
+def cites(volume):
+    global cite_table
+    n_cites = 10
+
+    with open("../stat/references/{}.txt".format(volume), "r") as f:
+        data = f.readlines()
+
+    for line in data[:n_cites]:
+        authors, year, count = line.split(",")
+
+        cite_table += "|{0}{2}{1}|{0}{3}{1}|{0}{4}{1}|\n".format("<center>",
+                                                            "</center>",
+                                                           ", ".join(map(lambda x: x.strip(), authors.split("&"))),
+                                                            year.strip(),
+                                                            count.strip())
+
+    display(Markdown(cite_table))

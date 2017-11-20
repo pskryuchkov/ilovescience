@@ -214,7 +214,7 @@ def main():
                      for x in sorted(cnt_d, key=cnt_d.get,reverse=True)
                      if cnt_d[x] > 1]
     pprint(relevant_refs[:n_top])
-    write_list(stat_path + "counted_refs.txt", relevant_refs)
+    write_list("{}{}.txt".format(stat_path, volume), relevant_refs)
 
     print "n_articles", n_articles
     print "accept_refs", len(accept_refs)
