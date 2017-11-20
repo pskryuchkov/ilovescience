@@ -226,7 +226,7 @@ def get_unique_articles(articles, terms, articles_dict):     # FIXME
 
     return term_unique_articles
 
-
+# FIXME: plural
 def line_filter(text, min_length=4):
     brackets = re.compile(r'{.*}') # remove formulas
     alphanum = re.compile(r'[\W_]+')
@@ -239,7 +239,7 @@ def line_filter(text, min_length=4):
         nline = " ".join([x for x in nline.split()
                                 if len(x) >= min_length # FIXME: empty strings
                                 and not x.isdigit()
-                                and not x in stop_list])
+                                and not x.lower() in stop_list])
 
         filtered.append(nline.lower())
 
@@ -429,8 +429,8 @@ def main(arxiv):
 
     if biGram:
         print("Searching for bigrams...")
-        
-        # FIXME: bigram transformer returns empty list 
+
+        # FIXME: bigram transformer returns empty list
         bigram_transformer = Phrases([sentence for topic_content in topics_texts
                                                 for sentence in topic_content])
 
@@ -472,4 +472,3 @@ if __name__ == "__main__":
     chdir(os.path.dirname(os.path.realpath(__file__)))
     stop_list = get_lines("extra/stoplist.txt")
     arg_run()
-

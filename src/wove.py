@@ -63,7 +63,7 @@ def break_remove(raw_text):
     text = break_expr.sub("", text)
     return text.split("\n")
 
-
+# FIXME: plural
 def line_filter(text, min_length=3):  # FIXME
     filtered = []
     exp1 = re.compile(r'==')
@@ -79,7 +79,7 @@ def line_filter(text, min_length=3):  # FIXME
             nline = " ".join([x for x in nline.split()
                                 if len(x) >= min_length
                                 and not x.isdigit()
-                                and not x in stoplist])
+                                and not x.lower() in stoplist])
 
             filtered.append(nline.lower())
 
@@ -145,7 +145,7 @@ def build_word_vec(show_log=True):
         logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
                             level=logging.INFO)
 
-    # FIXME: bigram transformer returns empty list 
+    # FIXME: bigram transformer returns empty list
     #bigram_transformer = Phrases(sentences)
     #return Word2Vec(bigram_transformer[sentences], min_count=min_count, size=size, window=window, workers=4)
 
@@ -290,5 +290,3 @@ if __name__ == "__main__":
 #pprint(model.most_similar(positive=["quantum", "macroscopic"], negative=["microscopic"], topn=100)) # qubits bose-einstein
 
 #pprint(model.most_similar(positive=["gas", "cold"], negative=["heat"], topn=n_ass))
-
-

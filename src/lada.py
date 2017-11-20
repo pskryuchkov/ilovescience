@@ -47,7 +47,7 @@ def create_dir(dn):
             if exc.errno != errno.EEXIST:
                 raise
 
-
+# FIXME: plural
 def line_filter(text, min_length=4):
     brackets = re.compile(r'{.*}')  # remove formulas
     alphanum = re.compile(r'[\W_]+')
@@ -59,7 +59,7 @@ def line_filter(text, min_length=4):
         nline = " ".join([x for x in nline.split()
                           if len(x) >= min_length  # FIXME: empty strings
                           and not x.isdigit()
-                          and x not in stoplist])
+                          and x.lower() not in stoplist])
 
         filtered.append(nline.lower())
 
@@ -122,7 +122,7 @@ def calculate_keys(vol, n_top, n_pass, cache_corpus=False,
 
     print("Searching for bigrams...")
 
-    # FIXME: bigram transformer returns empty list 
+    # FIXME: bigram transformer returns empty list
     #bigram_transformer = Phrases(texts, min_count=10)
     #texts = bigram_transformer[texts]
 
