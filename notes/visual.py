@@ -88,7 +88,8 @@ def draw_heatmap(volume, terms):
             mirror=True
         ),
         width = 500,
-        height = 500
+        height = 500,
+        title = "Keywords Correlations"
         )
 
     trace = go.Heatmap(z = corr,
@@ -186,7 +187,8 @@ def draw_graph(terms, extented_terms, model):
             zeroline=False),
         width=700,
         height=700,
-        hovermode= 'closest'
+        hovermode = 'closest',
+        title = "Keywords Local Satellites"
     )
 
     data = [trace]
@@ -230,7 +232,8 @@ def draw_scatter(volume):
     layout = dict(
             hovermode= 'closest',
             xaxis=dict(title="tf-idf"),
-            yaxis=dict(title="frequency")
+            yaxis=dict(title="frequency"),
+            title = "Keywords Document Satellites"
             )
 
     py.iplot({'data': data, 'layout': layout}, validate=False, show_link=False)
@@ -284,7 +287,7 @@ def draw_barchart(volume, n_keys = 10, n_row = 5, n_col = 3):
     for topic_words in table[:n_charts]:
         add_bar(fig, topic_words, n_topics, n_keys, n_row, n_col)
 
-    fig['layout'].update(height=750, width=750, showlegend=False)
+    fig['layout'].update(height=750, width=750, showlegend=False, title = "Volume Topics")
     py.iplot(fig, show_link=False);
 
 
@@ -319,5 +322,8 @@ def top_chart(volume):
     data = [go.Bar(
                 x=[x[0] for x in keywords_s],
                 y=[x[1] for x in keywords_s]
-    )]
-    py.iplot(data, show_link = False)
+            )]
+
+    layout = go.Layout(title="Keywords Raiting")
+
+    py.iplot({'data': data, 'layout': layout}, show_link = False)
