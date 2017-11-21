@@ -6,9 +6,11 @@ from matplotlib import cm
 import networkx as nx
 from numpy import *
 
-from plotly import tools
 import plotly.graph_objs as go
 import plotly.offline as py
+from plotly import tools
+
+from warnings import warn
 import csv
 
 
@@ -204,7 +206,7 @@ def draw_scatter(volume):
         ws = wb[name]
 
         if min(ws.max_row, ws.max_column) <= 1:
-            print("Warning: empty sheet '{}'".format(name))
+            warn("Empty sheet '{}'".format(name))
             continue
 
         table = [[line[0].value, line[1].value, line[2].value] for line in
@@ -303,3 +305,19 @@ def cites(volume):
                                                             count.strip())
 
     display(Markdown(cite_table))
+
+def top_chart(volume):
+    data = open("../stat/frequency/{0}/terms_unique.csv".format(volume), "r").readlines()[2:]
+    keywords = []
+    for line in data:
+        word, val, _ = line.split(",")
+        keywords.append([word, float(val)])
+
+    from pprint import pprint
+    keywords_s = sorted(keywords, key = lambda x: x[1], reverse=True)
+
+    data = [go.Bar(
+                x=[x[0] for x in keywords_s],
+                y=[x[1] for x in keywords_s]
+    )]
+    py.iplot(data, show_link = False)

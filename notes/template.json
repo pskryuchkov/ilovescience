@@ -2,8 +2,10 @@
  "cells": [
   {
    "cell_type": "code",
-   "execution_count": 1,
-   "metadata": {},
+   "execution_count": 8,
+   "metadata": {
+    "scrolled": true
+   },
    "outputs": [
     {
      "data": {
@@ -27,7 +29,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
+   "execution_count": 9,
    "metadata": {},
    "outputs": [],
    "source": [
@@ -38,13 +40,32 @@
   },
   {
    "cell_type": "code",
-   "execution_count": null,
-   "metadata": {},
+   "execution_count": 10,
+   "metadata": {
+    "scrolled": true
+   },
    "outputs": [],
    "source": [
     "model = Word2Vec.load(\"../stat/word_vec/{}.wordvec\".format(volume))\n",
     "terms = topics_normalize(model, get_lines(\"../topics/{}.txt\".format(section)))\n",
-    "extented_terms = [x[0] for term in terms for x in model.most_similar([term], topn=5)]\n",
+    "extented_terms = [x[0] for term in terms for x in model.most_similar([term], topn=5)]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "top_chart(volume)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
     "draw_heatmap(volume, terms)"
    ]
   },
@@ -54,16 +75,18 @@
    "metadata": {},
    "outputs": [],
    "source": [
-    "draw_graph(terms, extented_terms, model)"
+    "draw_scatter(volume)"
    ]
   },
   {
    "cell_type": "code",
    "execution_count": null,
-   "metadata": {},
+   "metadata": {
+    "scrolled": true
+   },
    "outputs": [],
    "source": [
-    "draw_scatter(volume)"
+    "draw_graph(terms, extented_terms, model)"
    ]
   },
   {
