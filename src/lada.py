@@ -108,8 +108,8 @@ def random_glob(path, n_files, mask="*.txt"):
     return file_list[:n_files]
 
 
-def calculate_keys(vol, n_top, n_pass, cache_corpus=False,
-                   cache_model=False):
+def calculate_keys(vol, n_top, n_pass, cache_corpus=True,
+                   cache_model=True):
 
     texts_path = "../arxiv/{0}/{1}/".format(vol.section, vol.year)
 
@@ -144,8 +144,11 @@ def calculate_keys(vol, n_top, n_pass, cache_corpus=False,
         with open(stat_path + "{0}.corpus".format(volume), 'wb') as f:
             pickle.dump(corpus, f)
 
+        with open(stat_path + "{0}.dict".format(volume), 'wb') as f:
+            pickle.dump(text, f)
+
     if cache_model:
-        lda.save(stat_path + "{0}.{1}.lda".format(volume, n_pass))
+        lda.save("{0}{1}".format(stat_path, volume))
     return lda
 
 
@@ -201,8 +204,8 @@ def arg_run():
         year = int(year_s)
         arxiv_vol = Volume(section, year, 0)
 
-        n_topics = 30
-        n_passes = 30
+        n_topics = 15
+        n_passes = 50
 
         short_flag = False
         if "-s" in argv:

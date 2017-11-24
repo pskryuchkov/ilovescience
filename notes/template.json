@@ -2,10 +2,8 @@
  "cells": [
   {
    "cell_type": "code",
-   "execution_count": 8,
-   "metadata": {
-    "scrolled": true
-   },
+   "execution_count": 1,
+   "metadata": {},
    "outputs": [
     {
      "data": {
@@ -29,7 +27,7 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 9,
+   "execution_count": 2,
    "metadata": {},
    "outputs": [],
    "source": [
@@ -40,13 +38,11 @@
   },
   {
    "cell_type": "code",
-   "execution_count": 10,
-   "metadata": {
-    "scrolled": true
-   },
+   "execution_count": null,
+   "metadata": {},
    "outputs": [],
    "source": [
-    "model = Word2Vec.load(\"../stat/word_vec/{}.wordvec\".format(volume))\n",
+    "model = Word2Vec.load(\"../stat/word_vec/{}\".format(volume))\n",
     "terms = topics_normalize(model, get_lines(\"../topics/{}.txt\".format(section)))\n",
     "extented_terms = [x[0] for term in terms for x in model.most_similar([term], topn=5)]"
    ]
@@ -57,7 +53,7 @@
    "metadata": {},
    "outputs": [],
    "source": [
-    "top_chart(volume)"
+    "top_chart(volume) # keywords raiting"
    ]
   },
   {
@@ -66,7 +62,7 @@
    "metadata": {},
    "outputs": [],
    "source": [
-    "draw_heatmap(volume, terms)"
+    "draw_heatmap(volume, terms) # keywords correlations"
    ]
   },
   {
@@ -75,18 +71,7 @@
    "metadata": {},
    "outputs": [],
    "source": [
-    "draw_scatter(volume)"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": null,
-   "metadata": {
-    "scrolled": true
-   },
-   "outputs": [],
-   "source": [
-    "draw_graph(terms, extented_terms, model)"
+    "draw_scatter(volume) # keywords document satellites"
    ]
   },
   {
@@ -95,7 +80,7 @@
    "metadata": {},
    "outputs": [],
    "source": [
-    "draw_barchart(volume)"
+    "draw_graph(terms, extented_terms, model) # keywords local satellites"
    ]
   },
   {
@@ -104,15 +89,33 @@
    "metadata": {},
    "outputs": [],
    "source": [
-    "cites(volume)"
+    "draw_barchart(volume) # volume topics"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "lda_articles(volume) # topic articles"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "cites(volume, n_cites=15) # references raiting"
    ]
   }
  ],
  "metadata": {
   "kernelspec": {
-   "display_name": "Python 2",
+   "display_name": "Anaconda",
    "language": "python",
-   "name": "python2"
+   "name": "conda"
   },
   "language_info": {
    "codemirror_mode": {
@@ -124,7 +127,7 @@
    "name": "python",
    "nbconvert_exporter": "python",
    "pygments_lexer": "ipython2",
-   "version": "2.7.14"
+   "version": "2.7.13"
   }
  },
  "nbformat": 4,

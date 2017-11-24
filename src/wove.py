@@ -37,7 +37,7 @@ n_ass = 10
 # FIXME
 stat_path = "../stat/word_vec/"
 texts_path = "../arxiv/{0}/{1}/{2:02d}/*.txt"
-vec_path = stat_path + "{0}.wordvec"
+vec_path = stat_path + "{0}"
 topics_path = ""
 
 volume = None

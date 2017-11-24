@@ -1,7 +1,7 @@
 from networkx.drawing.nx_agraph import graphviz_layout
+from gensim.models import Word2Vec, LdaMulticore
 from IPython.display import display, Markdown
 from openpyxl import load_workbook
-from gensim.models import Word2Vec
 from matplotlib import cm
 import networkx as nx
 from numpy import *
@@ -10,16 +10,27 @@ import plotly.graph_objs as go
 import plotly.offline as py
 from plotly import tools
 
+import pickle
+import os
+
 from warnings import warn
 import csv
 
 
 chart_count = 0
-cite_table = \
+
+cite_table_head = \
 """
 | {0}Author(s){1} | {0}Year{1} | {0}Ref. count{1} |
 | --- | --- | --- |
 """.format("<center>", "<center>")
+
+
+articles_table_head = \
+"""
+| Topic title | Articles |
+| --- | --- |
+"""
 
 
 def replics(model, target_word, topn=10):
@@ -89,7 +100,8 @@ def draw_heatmap(volume, terms):
         ),
         width = 500,
         height = 500,
-        title = "Keywords Correlations"
+        title = "",
+        margin=go.Margin(t=50)
         )
 
     trace = go.Heatmap(z = corr,
@@ -111,6 +123,7 @@ def add_edges(G, unique_pairs, terms, model, min_dist):
             w.append(0)
         G.add_edge(word_one, word_two)
     return w
+
 
 def draw_graph(terms, extented_terms, model):
     draw_method = "neato"
@@ -188,7 +201,7 @@ def draw_graph(terms, extented_terms, model):
         width=700,
         height=700,
         hovermode = 'closest',
-        title = "Keywords Local Satellites"
+        title = ""
     )
 
     data = [trace]
@@ -233,7 +246,7 @@ def draw_scatter(volume):
             hovermode= 'closest',
             xaxis=dict(title="tf-idf"),
             yaxis=dict(title="frequency"),
-            title = "Keywords Document Satellites"
+            title = ""
             )
 
     py.iplot({'data': data, 'layout': layout}, validate=False, show_link=False)
@@ -245,12 +258,14 @@ def add_bar(fig, inp, n_topics, n_keys, n_row, n_col):
     if chart_count >= n_topics:
         return
 
-    labels = sorted([x[1] for x in inp])
-    values = sorted([x[0] for x in inp])
+    keys = sorted([x for x in inp[:n_keys]], key=lambda x: x[1])
+
+    labels = [x[1] for x in keys]
+    values = [x[0] for x in keys]
 
     data = go.Bar(
-            x=labels[:n_keys],
-            y=values[:n_keys],
+            x=labels,
+            y=values,
             orientation = 'h',
             name = "topic #{}".format(chart_count + 1),
             marker = dict(color='orange')
@@ -261,6 +276,7 @@ def add_bar(fig, inp, n_topics, n_keys, n_row, n_col):
     fig['layout']['yaxis{0}'.format(chart_count+1)]['tickfont'].update(size=11,
                                                                        color="lightgrey")
     chart_count += 1
+
 
 def draw_barchart(volume, n_keys = 10, n_row = 5, n_col = 3):
     fn = "../stat/lda/{}.keys.csv".format(volume)
@@ -287,27 +303,25 @@ def draw_barchart(volume, n_keys = 10, n_row = 5, n_col = 3):
     for topic_words in table[:n_charts]:
         add_bar(fig, topic_words, n_topics, n_keys, n_row, n_col)
 
-    fig['layout'].update(height=750, width=750, showlegend=False, title = "Volume Topics")
+    fig['layout'].update(height=750, width=750, showlegend=False, title = "", margin=go.Margin(t=120))
     py.iplot(fig, show_link=False);
 
 
-def cites(volume):
-    global cite_table
-    n_cites = 10
+def cites(volume, n_cites=10, head=cite_table_head):
+    markdown_table = head
 
     with open("../stat/references/{}.txt".format(volume), "r") as f:
         data = f.readlines()
 
+    line_format = "|{0}{2}{1}|{0}{3}{1}|{0}{4}{1}|\n"
     for line in data[:n_cites]:
         authors, year, count = line.split(",")
 
-        cite_table += "|{0}{2}{1}|{0}{3}{1}|{0}{4}{1}|\n".format("<center>",
-                                                            "</center>",
-                                                           ", ".join(map(lambda x: x.strip(), authors.split("&"))),
-                                                            year.strip(),
-                                                            count.strip())
+        markdown_table += line_format.format("<center>", "</center>",
+                                              ", ".join(map(lambda x: x.strip(), authors.split("&"))),
+                                              year.strip(), count.strip())
+    display(Markdown(markdown_table))
 
-    display(Markdown(cite_table))
 
 def top_chart(volume):
     data = open("../stat/frequency/{0}/terms_unique.csv".format(volume), "r").readlines()[2:]
@@ -316,7 +330,6 @@ def top_chart(volume):
         word, val, _ = line.split(",")
         keywords.append([word, float(val)])
 
-    from pprint import pprint
     keywords_s = sorted(keywords, key = lambda x: x[1], reverse=True)
 
     data = [go.Bar(
@@ -324,6 +337,99 @@ def top_chart(volume):
                 y=[x[1] for x in keywords_s]
             )]
 
-    layout = go.Layout(title="Keywords Raiting")
+    layout = go.Layout(title="")
 
     py.iplot({'data': data, 'layout': layout}, show_link = False)
+
+
+def fn_pure(fn):
+    return os.path.splitext(os.path.basename(fn))[0]
+
+
+def lda_table(volume):
+    fn = "../stat/lda/{}.keys.csv".format(volume)
+    table = []
+    with open(fn, "rt") as f:
+        reader = csv.reader(f)
+        next(f)
+        for line in reader:
+            if len(line) == 1:
+                table.append([])
+            else:
+                table[-1].append([line[1], float(line[0])])
+    return table
+
+
+def topic_occur(text, topic, max_len=5000):
+    if len(text) > max_len:
+        return 0
+
+    counter = 0
+    for word in topic.keys():
+        counter += text.count(word) * topic[word]
+    return counter
+
+
+def relevant_articles(volume, n_articles=1000, n_topic_articles=5):
+    table = lda_table(volume)
+    text_cache = pickle.load(open('../src/extra/{}.cache'.format(volume), 'rb'))
+
+    topics_list = []
+    topic_titles = []
+
+    for x in table:
+        topic = {}
+        for y in x:
+            topic[y[0]] = y[1]
+
+        topic_titles.append(x[0][0])
+        topics_list.append(topic)
+
+    text_indexes = text_cache.keys()
+
+    score_list = []
+    for topic in topics_list:
+        occur = []
+
+        for idx in text_indexes[:n_articles]:
+            text = text_cache[idx][0].split()
+
+            val = 1.0 * topic_occur(text, topic)
+            if val > 0:
+                occur.append([fn_pure(idx), val])
+
+        score_list.append(occur)
+
+    sorted_score = [sorted(x, key=lambda z: z[1], reverse=True) for x in score_list]
+
+    relevant = []
+    for z in sorted_score:
+        sub = []
+
+        for w in z[:n_topic_articles]:
+            sub.append(w[0])
+
+        relevant.append(sub)
+
+    return topic_titles, relevant
+
+
+def lda_print(topic_names, articles_table, head=articles_table_head):
+    markdown_table = head
+
+    arxiv_link = "[{0}](https://arxiv.org/pdf/{0}.pdf)" + "&nbsp;" * 4
+
+    for j, topic in enumerate(topic_names):
+
+        ref_s = ""
+        for article_id in articles_table[j]:
+            ref_s += str(arxiv_link.format(article_id))
+
+        markdown_table += "| {0} | {1} |\n".format(topic, ref_s)
+
+    display(Markdown(markdown_table))
+
+
+def lda_articles(volume):
+    titles, articles = relevant_articles(volume)
+    lda_print(titles, articles)
