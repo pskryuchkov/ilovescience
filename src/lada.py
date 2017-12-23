@@ -35,7 +35,7 @@ def prepare_sentences(file_list, n_articles):
 
     if not os.path.isfile('cache/{}.cache'.format(volume)):
         for g, file in enumerate(file_list[:n_articles]):
-            print "{}/{} {}".format(g + 1, n_articles, shared.fn_pure(file))
+            print("{}/{} {}".format(g + 1, n_articles, shared.fn_pure(file)))
             text = " ".join(shared.line_filter(
                                 shared.ascii_normalize(
                                     open(file, "r").readlines()), min_length=4)).lower().split(".")
@@ -49,7 +49,7 @@ def prepare_sentences(file_list, n_articles):
             d = pickle.load(f)
 
         for g, file in enumerate(d.keys()):
-            print "{}/{} {}".format(g + 1, n_articles, shared.fn_pure(file))
+            print("{}/{} {}".format(g + 1, n_articles, shared.fn_pure(file)))
             text = d[file]
 
             base += [x.split() for x in text]
@@ -70,9 +70,9 @@ def calculate_keys(vol, n_top, n_pass, cache_corpus=True,
 
     print("Searching for bigrams...")
 
-    # FIXME: bigram transformer returns empty list
-    #bigram_transformer = Phrases(texts, min_count=10)
-    #texts = bigram_transformer[texts]
+    if config.biGram:
+        bigram_transformer = Phrases(texts, min_count=10)
+        texts = list(bigram_transformer[texts])
 
     print("Building corpus..")
     dictionary = corpora.Dictionary(texts)
@@ -93,7 +93,7 @@ def calculate_keys(vol, n_top, n_pass, cache_corpus=True,
             pickle.dump(corpus, f)
 
         with open(config.lda_stat + "{0}.dict".format(volume), 'wb') as f:
-            pickle.dump(text, f)
+            pickle.dump(texts, f)
 
     if cache_model:
         lda.save("{0}{1}".format(config.lda_stat, volume))
@@ -137,9 +137,9 @@ def topics(arxiv, n_top=30, n_pass=30, short_keylist=True, choice_mode="f"):
 
 def arg_run():
     if len(argv) < 2:
-        print "Error: too few arguments"
+        print("Error: too few arguments")
     elif len(argv) > 4:
-        print "Error: too many arguments"
+        print("Error: too many arguments")
     else:
         if "-d" in argv:
             global n_proc_articles

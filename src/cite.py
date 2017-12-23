@@ -75,7 +75,7 @@ def extract_journal_info(ref):
 
 # FIXME: function is too big
 def main():
-    print "Extracting refs..."
+    print("Extracting refs...")
 
     global_ref_list = []
 
@@ -136,10 +136,12 @@ def main():
     accept_refs = []
     decline_refs = []
 
-    print "Processing refs..."
+    print("Processing refs...")
 
     for i, ref in enumerate(global_ref_list):
-        if i % 1000 == 0 and i > 0: print i, len(global_ref_list)
+        if i % 1000 == 0 and i > 0:
+            print(i, len(global_ref_list))
+
         # authors
         res1 = exp1.findall(ref)
         res2 = exp2.findall(ref)
@@ -162,11 +164,13 @@ def main():
         else:
             decline_refs.append("{}".format(ref))
 
-    print "Counting pairs..."
+    print("Counting pairs...")
 
     cnt_d = {}
     for j in range(len(a_list)):
-        if j % 1000 == 0 and j > 0: print j, len(a_list)
+        if j % 1000 == 0 and j > 0:
+            print(j, len(a_list))
+
         # format: 'Author1 & Author2 & ... & AuthorN & Year'
         cur_ref = j
         is_similar = False
@@ -191,17 +195,17 @@ def main():
 
     write_list("{}{}.txt".format(config.ref_stat, volume), relevant_refs)
 
-    print "n_articles", n_proc_articles
-    print "accept_refs", len(accept_refs)
-    print "decline_refs", len(decline_refs)
-    print "top_cnt_sum", sum([z[1] for z in Counter(cnt_d).most_common(n_top)])
+    print("n_articles", n_proc_articles)
+    print("accept_refs", len(accept_refs))
+    print("decline_refs", len(decline_refs))
+    print("top_cnt_sum", sum([z[1] for z in Counter(cnt_d).most_common(n_top)]))
 
 
 def arg_run():
     if len(argv) < 2:
-        print "Error: too few arguments"
+        print("Error: too few arguments")
     elif len(argv) > 3:
-        print "Error: too many arguments"
+        print("Error: too many arguments")
     else:
         global volume
         volume = argv[1]

@@ -56,7 +56,7 @@ def prepare_sentences(file_list, n_articles):
     if not os.path.isfile('cache/{}.cache'.format(volume)):
         for g, file in enumerate(file_list[:n_articles]):
 
-            print "{}/{} {}".format(g + 1, n_articles, shared.fn_pure(file))
+            print("{}/{} {}".format(g + 1, n_articles, shared.fn_pure(file)))
 
             text = " ".join(shared.line_filter(
                                 shared.ascii_normalize(
@@ -74,7 +74,7 @@ def prepare_sentences(file_list, n_articles):
             d = pickle.load(f)
 
         for g, file in enumerate(d.keys()):
-            print "{}/{} {}".format(g + 1, n_articles, shared.fn_pure(file))
+            print("{}/{} {}".format(g + 1, n_articles, shared.fn_pure(file)))
             text = d[file]
 
             base += [x.split() for x in text]
@@ -93,9 +93,9 @@ def build_word_vec(show_log=True):
         logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
                             level=logging.INFO)
 
-    # FIXME: bigram transformer returns empty list
-    #bigram_transformer = Phrases(sentences)
-    #return Word2Vec(bigram_transformer[sentences], min_count=min_count, size=size, window=window, workers=4)
+    if config.biGram:
+        bigram_transformer = Phrases(sentences, min_count=10)
+        sentences = list(bigram_transformer[sentences])
 
     return Word2Vec(sentences, min_count=min_count, size=size, window=window, workers=4)
 
@@ -121,10 +121,10 @@ def topics_interset(model):
         similar = model.most_similar(positive=[topics_normalized[pair[0]],
                                                topics_normalized[pair[1]]], topn=n_ass)
         cnt = sum([1 for record in similar if record[1] >= 0.6])
-        print "{} {} ({})".format(topics_normalized[pair[0]], topics_normalized[pair[1]], cnt)
+        print("{} {} ({})".format(topics_normalized[pair[0]], topics_normalized[pair[1]], cnt))
         for x in sorted(similar, key=(lambda x: x[1]), reverse=True):
             if x[1] >= 0.6:
-                print "  {} {}".format(x[0], round(x[1],2))
+                print("  {} {}".format(x[0], round(x[1],2)))
 
 
 def topics_normalize(model, raw_topics):
@@ -132,11 +132,11 @@ def topics_normalize(model, raw_topics):
     for word in raw_topics:
         r = replics(model, word)
         if r is not None:
-            print "{} -> {} ({})".format(word, max(r, key=r.get), r[max(r, key=r.get)])
+            print("{} -> {} ({})".format(word, max(r, key=r.get), r[max(r, key=r.get)]))
             norm_topics.append(max(r, key=r.get))
         else:
             norm_topics.append(None)
-            print word, "None"
+            print(word, "None")
 
     return norm_topics
 
@@ -148,13 +148,13 @@ def topics_info(word_vec_path):
 
     for word in topics:
         if word in model.vocab.keys():
-            print word
+            print(word)
             for neighbor in model.most_similar(positive=[word], topn=n_ass):
 
-                print "  '{}', {}, {}".format(neighbor[0], round(neighbor[1], 2),
-                                              model.vocab[neighbor[0]].count)
+                print("  '{}', {}, {}".format(neighbor[0], round(neighbor[1], 2),
+                                              model.vocab[neighbor[0]].count))
         else:
-            print word, "None"
+            print(word, "None")
 
 
 def vocab(word_vec_path):
@@ -167,16 +167,16 @@ def vocab(word_vec_path):
 def console(path):
     model = Word2Vec.load(path)
 
-    print "Vocabulary length: {} words".format(len(model.vocab.keys()))
-    print "Minimal count: {} words".format(model.min_count)
+    print("Vocabulary length: {} words".format(len(model.vocab.keys())))
+    print("Minimal count: {} words".format(model.min_count))
 
     while True:
         query = raw_input('> ')
         if query in model.vocab.keys():
             for record in model.most_similar(positive=[query], topn=10):
-                print "{}, {}, {}".format(record[0], round(record[1], 2), model.vocab[record[0]].count)
+                print("{}, {}, {}".format(record[0], round(record[1], 2), model.vocab[record[0]].count))
         else:
-            print "There is no such word: '{}'".format(query)
+            print("There is no such word: '{}'".format(query))
 
 
 def arg_run():
@@ -204,7 +204,7 @@ def arg_run():
 
     if not b_flag and not t_flag:
         # console
-        print "Word2vec on arxiv {}.{:02d}".format(y)
+        print("Word2vec on arxiv {}.{:02d}".format(y))
         console(vec_path.format(volume))
     else:
         if b_flag:
@@ -217,6 +217,6 @@ def arg_run():
 
 
 if __name__ == "__main__":
-    stoplist = shared.get_lines("extra/stoplist.txt")
+    os.chdir(os.path.dirname(os.path.realpath(__file__)))
     shared.create_dir(config.vec_stat)
     arg_run()

@@ -207,19 +207,19 @@ def main(arxiv):
     else:
         e_terms = terms
 
-    print "Getting relevant articles..."
+    print("Getting relevant articles...")
     articles = group_articles("../arxiv/{0}/{1}/"
                                 .format(arxiv.section, arxiv.year),
                                     terms, return_unrelevant=check_unrelevant)
 
     unique_articles = get_unique_articles(articles, e_terms, articles)
 
-    print "Coverage:", round(1.0 * sum([len(articles[x]) for x in articles.keys()
-                                        if x != "uncovered"]) / n_proc_articles, 2)
+    print("Coverage:", round(1.0 * sum([len(articles[x]) for x in articles.keys()
+                                        if x != "uncovered"]) / n_proc_articles, 2))
 
-    print "Unique coverage:", round(1.0 * (sum([len(x) for x in unique_articles])
+    print("Unique coverage:", round(1.0 * (sum([len(x) for x in unique_articles])
                                            - int(check_unrelevant)
-                                           * len(unique_articles[-1])) / n_proc_articles, 2)
+                                           * len(unique_articles[-1])) / n_proc_articles, 2))
 
     calc_unique(terms, articles, unique_articles)
 
@@ -252,23 +252,22 @@ def main(arxiv):
     if config.biGram:
         print("Searching for bigrams...")
 
-        # FIXME: bigram transformer returns empty list
         bigram_transformer = Phrases([sentence for topic_content in topics_texts
                                                 for sentence in topic_content])
 
-        topics_texts = [bigram_transformer[topic_content]
-                        for topic_content in topics_texts]
+        topics_texts = [list(bigram_transformer[topic_content])
+                                for topic_content in topics_texts]
 
-    print "Calculating tf-idf..."
+    print("Calculating tf-idf...")
 
     calc_stat(e_terms, topics_texts)
 
 
 def arg_run():
     if len(argv) < 2:
-        print "Error: too few arguments"
+        print("Error: too few arguments")
     elif len(argv) > 3:
-        print "Error: too many arguments"
+        print("Error: too many arguments")
     else:
         global volume
 

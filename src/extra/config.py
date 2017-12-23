@@ -1,4 +1,4 @@
-biGram = False
+biGram = True
 n_articles = 1000
 n_articles_debug = 100
 

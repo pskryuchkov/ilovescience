@@ -1,7 +1,8 @@
+#!/usr/bin/python
+
 # Downloading articles from arxiv.org.
 # PDF files after loading converted to txt (on fly)
 # Usage: './load.py -s cond-mat -y 16 -m 2'
-# FIXME usage: './load.py cond-mat.17'
 
 # Articles saved on '../arxiv/<section>/<year>/<month>'
 
@@ -21,6 +22,7 @@ import subprocess
 import urllib2
 import signal
 import sys
+import os
 
 import argparse
 import time
@@ -56,7 +58,7 @@ def pdf_from_url_to_txt(url):
 
     start_loading = time.time()
     fp = StringIO(urllib2.urlopen(url).read())
-    print "load ok"
+    print("load ok")
     loading_time = time.time() - start_loading
 
     interpreter = PDFPageInterpreter(rsrcmgr, device)
@@ -70,13 +72,13 @@ def pdf_from_url_to_txt(url):
             interpreter.process_page(page)
         except Exception, exc:
             if str(exc) == "Timeout":
-                print "Converting timeout: {0}".format(url)
+                print("Converting timeout: {0}".format(url))
             else:
-                print "PDF converting error: {0}".format(url)
+                print("PDF converting error: {0}".format(url))
             err_flag = True
             break
 
-    if not err_flag: print "convert ok"
+    if not err_flag: print("convert ok")
     text = retstr.getvalue()
     fp.close()
     device.close()
@@ -99,7 +101,7 @@ def arg_run():
     if args.s is None \
             or args.y is None \
             or args.m is None:
-        print "Error: too few arguments"
+        print("Error: too few arguments")
         exit()
 
     section = args.s[0]
@@ -109,7 +111,7 @@ def arg_run():
     if args.o is not None:
         mirror = args.o[0]
 
-    print "Section: {}, year: {}, month: {}".format(section, year, month)
+    print("Section: {}, year: {}, month: {}".format(section, year, month))
 
     index_path = "../arxiv/{0}/{1}/{2}".format(section, year, str(month).zfill(2))
 
@@ -128,14 +130,14 @@ def main():
 
     if len(mirror) > 0:
         if mirror in valid_mirrors:
-            print "Mirror: {0}".format(mirror)
+            print("Mirror: {0}".format(mirror))
         elif mirror == "default":
             mirror = ""
         else:
-            print "Invalid mirror: {}".format(mirror)
+            print("Invalid mirror: {}".format(mirror))
             exit()
 
-    print "Connecting to arxiv..."
+    print("Connecting to arxiv...")
     data = urllib2.urlopen(target_url)
 
     articles = []
@@ -155,7 +157,7 @@ def main():
     else:
         makedirs(index_path)
 
-    print "Loading articles..."
+    print("Loading articles...")
     for j in range(min(len(articles), maxArticles)):
         signal.alarm(time_lim)
         try:
@@ -165,24 +167,21 @@ def main():
                 text, load_time, convert_time, err_flag = pdf_from_url_to_txt(link)
 
                 if not err_flag:
-                    print "{0}/{1}: {2}, {3}s / {4}s".format(j + 1,
+                    print("{0}/{1}: {2}, {3}s / {4}s".format(j + 1,
                                                         n,
                                                         articles[j],
                                                         round(load_time, 2),
-                                                        round(convert_time, 2))
+                                                        round(convert_time, 2)))
 
                     with open('{0}/{1}.txt'.format(index_path, articles[j]), 'a') as the_file:
                         the_file.write(text)
             else:
-                print "{0} already loaded".format(articles[j])
+                print("{0} already loaded".format(articles[j]))
 
             signal.alarm(0)
 
         except Exception, exc:
-            #if str(exc) == "Timeout":
-            #    print "Converting timeout: {0}".format(articles[j])
-            #else:
-            print "{}: {}".format(articles[j], exc)
+            print("{}: {}".format(articles[j], exc))
 
 
 def handler(signum, frame):
