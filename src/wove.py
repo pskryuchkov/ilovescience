@@ -1,59 +1,44 @@
+#!/usr/bin/python
+
 # Word2vec algorithm applying to scientific texts
 
 # Calculating word vectors
-# python wove.py cond-mat.16.03 -b
+# python wove.py cond-mat.17 -b
 
 # Topics word vectors info
-# python wove.py cond-mat.16.03 -t
+# python wove.py cond-mat.17 -t
 
 # Word2vec console (pre-calclulated wordvectors required)
-# python wove.py cond-mat.16.03
+# python wove.py cond-mat.17
 
-# FIXME usage: './wove.py cond-mat.17'
-
-# Tested for Anaconda Python 2.7.13
-# If script doesn't work, check your Python interpteter version.
 
 from gensim.models import Word2Vec, Phrases
-from unidecode import unidecode
-from sys import argv
-from os import chdir
-import fnmatch
+from sys import argv, path
 import logging
 import pickle
-import random
-import errno
-import os
 import re
+import os
+
+path.insert(0, os.path.dirname(
+                    os.path.realpath(__file__)) + '/extra')
+import shared
+import config
+
 
 min_count = 10
 size = 300
 window = 10
 
-n_articles = 1000
-n_articles_debug = 100
 n_ass = 10
 
+n_proc_articles = config.n_articles
+
 # FIXME
-stat_path = "../stat/word_vec/"
 texts_path = "../arxiv/{0}/{1}/{2:02d}/*.txt"
-vec_path = stat_path + "{0}"
+vec_path = config.vec_stat + "{0}"
 topics_path = ""
 
 volume = None
-
-def create_dir(dn):
-    if not os.path.exists(dn):
-        try:
-            os.makedirs(dn)
-        except OSError as exc:
-            if exc.errno != errno.EEXIST:
-                raise
-
-
-def ascii_normalize(text):
-    # .decode("ascii", "ignore")
-    return [unidecode(line.decode("utf-8")) for line in text]
 
 
 # do we need it?
@@ -63,74 +48,37 @@ def break_remove(raw_text):
     text = break_expr.sub("", text)
     return text.split("\n")
 
-# FIXME: plural
-def line_filter(text, min_length=3):  # FIXME
-    filtered = []
-    exp1 = re.compile(r'==')
-    exp2 = re.compile(r'{.*}')
-    # exp3 = re.compile(r'^[0-9]+')
-    alphanum = re.compile(r'[\W_]+')
-    for line in text:
-        nline = alphanum.sub(' ', line).strip()
-        if len(exp1.findall(nline)) == 0 \
-                and len(exp2.findall(nline)) == 0:
-
-            # sline = map(lambda x: normalizer.stem(x), nline.split())
-            nline = " ".join([x for x in nline.split()
-                                if len(x) >= min_length
-                                and not x.isdigit()
-                                and not x.lower() in stoplist])
-
-            filtered.append(nline.lower())
-
-    return filtered
-
-
-def fn_pure(fn):
-    return os.path.splitext(os.path.basename(fn))[0]
-
 
 def prepare_sentences(file_list, n_articles):
     base = []
     d = {}
 
-    if not os.path.isfile('extra/{}.cache'.format(volume)):
+    if not os.path.isfile('cache/{}.cache'.format(volume)):
         for g, file in enumerate(file_list[:n_articles]):
 
-            print "{}/{} {}".format(g + 1, n_articles, fn_pure(file))
+            print "{}/{} {}".format(g + 1, n_articles, shared.fn_pure(file))
 
-            text = " ".join(line_filter(
-                ascii_normalize(
-                    open(file, "r").readlines()))).lower().split(".")
+            text = " ".join(shared.line_filter(
+                                shared.ascii_normalize(
+                                    open(file, "r").readlines()), min_length=3)).lower().split(".")
 
             d[file] = text
             base += [x.split() for x in text]
 
-        with open('extra/{}.cache'.format(volume), 'wb') as f:
+        with open('cache/{}.cache'.format(volume), 'wb') as f:
             pickle.dump(d, f)
 
     else:
 
-        with open('extra/{}.cache'.format(volume), 'rb') as f:
+        with open('cache/{}.cache'.format(volume), 'rb') as f:
             d = pickle.load(f)
 
         for g, file in enumerate(d.keys()):
-            print "{}/{} {}".format(g + 1, n_articles, fn_pure(file))
+            print "{}/{} {}".format(g + 1, n_articles, shared.fn_pure(file))
             text = d[file]
 
             base += [x.split() for x in text]
     return base
-
-
-def random_glob(path, n_files, mask="*.txt"):
-    file_list = []
-
-    for root, dirnames, filenames in os.walk(path):
-        for filename in fnmatch.filter(filenames, mask):
-            file_list.append(os.path.join(root, filename))
-
-    random.shuffle(file_list)
-    return file_list[:n_files]
 
 
 def build_word_vec(show_log=True):
@@ -138,8 +86,8 @@ def build_word_vec(show_log=True):
     section, year = volume.split(".")
     texts_path = "../arxiv/{0}/{1}/".format(section, year)
 
-    files_list = random_glob(texts_path, n_articles)
-    sentences = prepare_sentences(files_list, n_articles)
+    files_list = shared.random_glob(texts_path, n_proc_articles)
+    sentences = prepare_sentences(files_list, n_proc_articles)
 
     if show_log:
         logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
@@ -151,9 +99,6 @@ def build_word_vec(show_log=True):
 
     return Word2Vec(sentences, min_count=min_count, size=size, window=window, workers=4)
 
-def get_lines(fn):
-    return [line.strip() for line in open(fn, "r").readlines()]
-
 
 def replics(model, target_word, topn=10):
     return {word: model.vocab[word].count
@@ -162,7 +107,7 @@ def replics(model, target_word, topn=10):
 
 
 def topics_interset(model):
-    topics = get_lines(topics_path)
+    topics = shared.get_lines(topics_path)
 
     topics_normalized = []
     for topic in topics:
@@ -199,12 +144,13 @@ def topics_normalize(model, raw_topics):
 def topics_info(word_vec_path):
     model = Word2Vec.load(word_vec_path)
 
-    topics = topics_normalize(model, get_lines(topics_path))
+    topics = topics_normalize(model, shared.get_lines(topics_path))
 
     for word in topics:
         if word in model.vocab.keys():
             print word
             for neighbor in model.most_similar(positive=[word], topn=n_ass):
+
                 print "  '{}', {}, {}".format(neighbor[0], round(neighbor[1], 2),
                                               model.vocab[neighbor[0]].count)
         else:
@@ -241,8 +187,8 @@ def arg_run():
         raise Exception("Too many arguments")
 
     if "-d" in argv:
-        global n_articles
-        n_articles = n_articles_debug
+        global n_proc_articles
+        n_proc_articles = config.n_articles_debug
 
     b_flag = "-b" in argv
     t_flag = "-t" in argv
@@ -271,22 +217,6 @@ def arg_run():
 
 
 if __name__ == "__main__":
-    # initialization
-    chdir(os.path.dirname(os.path.realpath(__file__)))
-    stoplist = get_lines("extra/stoplist.txt")
-    create_dir(stat_path)
-
+    stoplist = shared.get_lines("extra/stoplist.txt")
+    shared.create_dir(config.vec_stat)
     arg_run()
-
-# TODO: discover relations
-#print model.doesnt_match("insulating superconductive d-wave cdw sdw paramagnetic".split())
-
-#pprint(model.most_similar(positive=["graphene", "experiment"], negative=["theory"], topn=n_ass))
-#pprint(model.most_similar(positive=["graphene", "theory"], negative=["experiment"], topn=n_ass))
-
-#pprint(model.most_similar(positive=["superconducting", "low_temperature"], negative=["high_temperature"], topn=n_ass))
-#pprint(model.most_similar(positive=["superconducting", "high_temperature"], negative=["low_temperature"], topn=100))
-
-#pprint(model.most_similar(positive=["quantum", "macroscopic"], negative=["microscopic"], topn=100)) # qubits bose-einstein
-
-#pprint(model.most_similar(positive=["gas", "cold"], negative=["heat"], topn=n_ass))

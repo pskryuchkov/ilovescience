@@ -1,30 +1,25 @@
-# Keywords extracting (latent dirichlet allocation used)
-# Usage: 'python lada.py cond-mat.16.03'
-# FIXME usage: './lada.py cond-mat.17'
+#!/usr/bin/env python
 
-# Tested for Anaconda Python 2.7.13
-# If script doesn't work, check your Python interpteter version.
+# Keywords extracting (latent dirichlet allocation used)
+# Usage: 'python lada.py cond-mat.17'
+
 
 from gensim.models import LdaMulticore, Phrases
-from unidecode import unidecode
 from gensim import corpora
-from sys import argv
-from os import chdir
-import os.path
+from sys import argv, path
 import logging
-import fnmatch
 import pickle
 import random
-import errno
 import os
-import re
+
+path.insert(0, os.path.dirname(
+                    os.path.realpath(__file__)) + '/extra')
+import shared
+import config
 
 
-n_articles = 1000
-n_articles_debug = 100
-
-stat_path = "../stat/lda/"
 volume = None
+n_proc_articles = config.n_articles
 
 
 class Volume:
@@ -34,78 +29,31 @@ class Volume:
         self.month = str(month).zfill(2)
 
 
-def ascii_normalize(text):
-    # .decode("ascii", "ignore")
-    return [unidecode(line.decode("utf-8")) for line in text]
-
-
-def create_dir(dn):
-    if not os.path.exists(dn):
-        try:
-            os.makedirs(dn)
-        except OSError as exc:
-            if exc.errno != errno.EEXIST:
-                raise
-
-# FIXME: plural
-def line_filter(text, min_length=4):
-    brackets = re.compile(r'{.*}')  # remove formulas
-    alphanum = re.compile(r'[\W_]+')
-
-    filtered = []
-    for line in text:
-        nline = brackets.sub(' ', line).strip()
-        nline = alphanum.sub(' ', nline).strip()
-        nline = " ".join([x for x in nline.split()
-                          if len(x) >= min_length  # FIXME: empty strings
-                          and not x.isdigit()
-                          and x.lower() not in stoplist])
-
-        filtered.append(nline.lower())
-
-    return filtered
-
-
-def fn_pure(fn):
-    return os.path.splitext(os.path.basename(fn))[0]
-
-
 def prepare_sentences(file_list, n_articles):
     base = []
     d = {}
 
-    if not os.path.isfile('extra/{}.cache'.format(volume)):
+    if not os.path.isfile('cache/{}.cache'.format(volume)):
         for g, file in enumerate(file_list[:n_articles]):
-            print "{}/{} {}".format(g + 1, n_articles, fn_pure(file))
-            text = " ".join(line_filter(
-                                ascii_normalize(
-                                    open(file, "r").readlines()))).lower().split(".")
+            print "{}/{} {}".format(g + 1, n_articles, shared.fn_pure(file))
+            text = " ".join(shared.line_filter(
+                                shared.ascii_normalize(
+                                    open(file, "r").readlines()), min_length=4)).lower().split(".")
             d[file] = text
             base += [x.split() for x in text]
 
-        with open('extra/{}.cache'.format(volume), 'wb') as f:
+        with open('cache/{}.cache'.format(volume), 'wb') as f:
             pickle.dump(d, f)
     else:
-        with open('extra/{}.cache'.format(volume), 'rb') as f:
+        with open('cache/{}.cache'.format(volume), 'rb') as f:
             d = pickle.load(f)
 
         for g, file in enumerate(d.keys()):
-            print "{}/{} {}".format(g + 1, n_articles, fn_pure(file))
+            print "{}/{} {}".format(g + 1, n_articles, shared.fn_pure(file))
             text = d[file]
 
             base += [x.split() for x in text]
     return base
-
-
-def random_glob(path, n_files, mask="*.txt"):
-    file_list = []
-
-    for root, dirnames, filenames in os.walk(path):
-        for filename in fnmatch.filter(filenames, mask):
-            file_list.append(os.path.join(root, filename))
-
-    random.shuffle(file_list)
-    return file_list[:n_files]
 
 
 def calculate_keys(vol, n_top, n_pass, cache_corpus=True,
@@ -116,9 +64,9 @@ def calculate_keys(vol, n_top, n_pass, cache_corpus=True,
     if not os.path.isdir(texts_path):
         raise Exception('There is no such path: {}'.format(texts_path))
 
-    files_list = random_glob(texts_path, n_articles)
+    files_list = shared.random_glob(texts_path, n_proc_articles)
 
-    texts = prepare_sentences(files_list, n_articles)
+    texts = prepare_sentences(files_list, n_proc_articles)
 
     print("Searching for bigrams...")
 
@@ -132,7 +80,7 @@ def calculate_keys(vol, n_top, n_pass, cache_corpus=True,
     dictionary.filter_extremes(no_below=20)
 
     corpus = [dictionary.doc2bow(text) for text in texts]
-
+    
     logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',
                         level=logging.INFO)
 
@@ -141,14 +89,14 @@ def calculate_keys(vol, n_top, n_pass, cache_corpus=True,
                        workers=4, passes=n_pass, iterations=400, eval_every=None)
 
     if cache_corpus:
-        with open(stat_path + "{0}.corpus".format(volume), 'wb') as f:
+        with open(config.lda_stat + "{0}.corpus".format(volume), 'wb') as f:
             pickle.dump(corpus, f)
 
-        with open(stat_path + "{0}.dict".format(volume), 'wb') as f:
+        with open(config.lda_stat + "{0}.dict".format(volume), 'wb') as f:
             pickle.dump(text, f)
 
     if cache_model:
-        lda.save("{0}{1}".format(stat_path, volume))
+        lda.save("{0}{1}".format(config.lda_stat, volume))
     return lda
 
 
@@ -175,7 +123,7 @@ def topics(arxiv, n_top=30, n_pass=30, short_keylist=True, choice_mode="f"):
                 elif choice_mode == "f":
                     f.write("{}\n".format(topic[0][1]))
     else:
-        report = open(stat_path + "{0}.keys.csv".format(volume), "w+")
+        report = open(config.lda_stat + "{0}.keys.csv".format(volume), "w+")
         report.write("sep=,\n")
 
         for c, topic in enumerate(table):
@@ -194,8 +142,8 @@ def arg_run():
         print "Error: too many arguments"
     else:
         if "-d" in argv:
-            global n_articles
-            n_articles = n_articles_debug
+            global n_proc_articles
+            n_proc_articles = config.n_articles_debug
 
         global volume
         volume = argv[1]
@@ -205,7 +153,7 @@ def arg_run():
         arxiv_vol = Volume(section, year, 0)
 
         n_topics = 15
-        n_passes = 50
+        n_passes = 30
 
         short_flag = False
         if "-s" in argv:
@@ -213,12 +161,12 @@ def arg_run():
             n_topics = 10
             n_passes = 15
 
-        create_dir(stat_path)
+            shared.create_dir(config.lda_stat)
 
         # optimal values: n_topics and n_passes ~ 30
         topics(arxiv_vol, n_topics, n_passes, short_keylist=short_flag)
 
 if __name__ == "__main__":
-    chdir(os.path.dirname(os.path.realpath(__file__)))
+    os.chdir(os.path.dirname(os.path.realpath(__file__)))
     stoplist = [x.rstrip() for x in open("extra/stoplist.txt", "r").readlines()]
     arg_run()

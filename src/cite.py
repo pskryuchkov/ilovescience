@@ -1,38 +1,25 @@
-# This script counts references and show most citied articles
-# Usage: 'python freq.py cond-mat.16.03'
-# FIXME usage: './freq.py cond-mat.17'
+#!/usr/bin/python
 
-# Tested for Anaconda Python 2.7.13
-# If script doesn't work, check your Python interpteter version.
+# This script counts references and show most citied articles
+# Usage: 'python freq.py cond-mat.17'
+
 
 from collections import Counter
+from sys import argv, path
 from pprint import pprint
-from sys import argv
-from os import chdir
-import fnmatch
-import random
 import pickle
-import errno
 import re
 import os
 
-n_articles = 1000
-n_articles_debug = 100
+path.insert(0, os.path.dirname(
+                    os.path.realpath(__file__)) + '/extra')
+import shared
+import config
+
 
 n_top = 30
-stat_path = "../stat/references/"
-write_reports = (n_articles < 500)
-
 volume = None
-
-
-def create_dir(dn):
-    if not os.path.exists(dn):
-        try:
-            os.makedirs(dn)
-        except OSError as exc:
-            if exc.errno != errno.EEXIST:
-                raise
+n_proc_articles = config.n_articles
 
 
 def starts_with(str, sub_str):
@@ -86,17 +73,7 @@ def extract_journal_info(ref):
     return journal
 
 
-def random_glob(path, n_files, mask="*.txt"):
-    file_list = []
-
-    for root, dirnames, filenames in os.walk(path):
-        for filename in fnmatch.filter(filenames, mask):
-            file_list.append(os.path.join(root, filename))
-
-    random.shuffle(file_list)
-    return file_list[:n_files]
-
-
+# FIXME: function is too big
 def main():
     print "Extracting refs..."
 
@@ -105,10 +82,10 @@ def main():
     section, year = volume.split(".")
     texts_path = "../arxiv/{0}/{1}/".format(section, year)
 
-    if not os.path.isfile('extra/{}.cache'.format(volume)):
-        files_list = random_glob(texts_path, n_articles)
+    if not os.path.isfile('cache/{}.cache'.format(volume)):
+        files_list = shared.random_glob(texts_path, n_proc_articles)
     else:
-        with open('extra/{}.cache'.format(volume), 'rb') as f:
+        with open('cache/{}.cache'.format(volume), 'rb') as f:
             d = pickle.load(f)
             files_list = d.keys()
 
@@ -160,10 +137,6 @@ def main():
     decline_refs = []
 
     print "Processing refs..."
-    j_list = []
-    ok_cnt = 0
-    neg_cnt = 0
-    neg_lst = []
 
     for i, ref in enumerate(global_ref_list):
         if i % 1000 == 0 and i > 0: print i, len(global_ref_list)
@@ -206,17 +179,19 @@ def main():
 
         if not is_similar: cnt_d[cur_ref] = 1
 
-    if write_reports:
-        write_list(stat_path + "accept_refs.txt", accept_refs)
-        write_list(stat_path + "decline_refs.txt", decline_refs)
+    if n_proc_articles == config.n_articles_debug:
+        write_list(config.ref_stat + "accept_refs.txt", accept_refs)
+        write_list(config.ref_stat + "decline_refs.txt", decline_refs)
 
     relevant_refs = ["{}, {}, {}".format(" & ".join(a_list[x]), int(y_list[x][0]), cnt_d[x])
                      for x in sorted(cnt_d, key=cnt_d.get,reverse=True)
                      if cnt_d[x] > 1]
-    pprint(relevant_refs[:n_top])
-    write_list("{}{}.txt".format(stat_path, volume), relevant_refs)
 
-    print "n_articles", n_articles
+    pprint(relevant_refs[:n_top])
+
+    write_list("{}{}.txt".format(config.ref_stat, volume), relevant_refs)
+
+    print "n_articles", n_proc_articles
     print "accept_refs", len(accept_refs)
     print "decline_refs", len(decline_refs)
     print "top_cnt_sum", sum([z[1] for z in Counter(cnt_d).most_common(n_top)])
@@ -235,12 +210,11 @@ def arg_run():
         y = int(y)
 
         if "-d" in argv:
-            global n_articles
-            n_articles = n_articles_debug
+            global n_proc_articles
+            n_proc_articles = config.n_articles_debug
 
-        create_dir(stat_path)
+        shared.create_dir(config.ref_stat)
         main()
 
 if __name__ == "__main__":
-    chdir(os.path.dirname(os.path.realpath(__file__)))
     arg_run()
