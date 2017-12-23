@@ -74,6 +74,8 @@ def calculate_keys(vol, n_top, n_pass, cache_corpus=True,
         bigram_transformer = Phrases(texts, min_count=10)
         texts = list(bigram_transformer[texts])
 
+    texts = shared.plural_filter(texts)
+
     print("Building corpus..")
     dictionary = corpora.Dictionary(texts)
 

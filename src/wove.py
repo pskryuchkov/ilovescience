@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # Word2vec algorithm applying to scientific texts
 
@@ -96,6 +96,8 @@ def build_word_vec(show_log=True):
     if config.biGram:
         bigram_transformer = Phrases(sentences, min_count=10)
         sentences = list(bigram_transformer[sentences])
+
+    sentences = shared.plural_filter(sentences)
 
     return Word2Vec(sentences, min_count=min_count, size=size, window=window, workers=4)
 

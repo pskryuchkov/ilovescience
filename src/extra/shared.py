@@ -146,15 +146,15 @@ def console_table(n_print=6, n_sep=30):
 
             for label, sheet in zip(table.labels, table.content):
 
-                print "-" * n_sep
-                print label.upper()
-                print "-" * n_sep
+                print("-" * n_sep)
+                print(label.upper())
+                print("-" * n_sep)
 
                 for j, line in enumerate(sheet):
                     if j < n_print:
-                        print ", ".join(map(lambda x: str(x), line))
+                        print(", ".join(list(map(lambda x: str(x), line))))
                     else:
-                        print "..."
+                        print("...")
                         break
 
             return table
@@ -180,5 +180,28 @@ def line_filter(text, min_length):
         filtered.append(nline.lower())
 
     return filtered
+
+
+def plural_filter(texts):
+    f_base = []
+
+    flat = set([x for sublist in texts for x in sublist])
+
+    for j, text in enumerate(texts):
+        f_text = []
+        for word in text:
+            if word[-1] == "s" and not word[-2] == "s":
+                candidate = word[:-1]
+                if candidate in flat:
+                    f_text.append(candidate)
+                else:
+                    f_text.append(word)
+            else:
+                f_text.append(word)
+
+        f_base.append(f_text)
+
+    return f_base
+
 
 stop_list = get_lines(os.path.dirname(os.path.realpath(__file__)) + "/stoplist.txt")
