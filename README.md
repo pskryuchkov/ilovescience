@@ -14,14 +14,10 @@ Set of scripts for [arxiv.org](https://arxiv.org/) articles text mining
 
 `wove.py` console for semantic similar words searching ([word2vec](https://ru.wikipedia.org/wiki/Word2vec)). Pre-calclulated wordvectors required.
 
-Articles stored in `.txt` format in `arxiv/<section>/<year>/<month>/` Results stored in `stat` path.
+Scripts stored in `src` path. Articles stored in `.txt` format in `arxiv/<section>/<year>/<month>/` Results stored in `stat` path. 
 
 ### Usage
 
-`<script> <section>.<year>.<month>`
+`discover.py <section>.<year>` run all analysing scripts
 
-For word vectors calculating in `wove.py` use -b flag.
-
-### Example
-
-`python lada.py cond-mat.16.03`
+`notes.py <section>.<year>` generate and open Jupyter notebook with calculated statistics
