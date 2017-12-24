@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # This script counts references and show most citied articles
 # Usage: 'python freq.py cond-mat.17'

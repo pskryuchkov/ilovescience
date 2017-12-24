@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 # Frequent analisys with tf-idf. List of topics required (../topics/<section>.txt)
 # Usage: 'python freq.py cond-mat.17'
