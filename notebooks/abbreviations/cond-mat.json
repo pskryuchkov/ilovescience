@@ -1,0 +1,11 @@
+{
+    "dis-nn" :"Disordered Systems and Neural Networks",
+    "mtrl-sci" : "Materials Science",
+    "mes-hall" : "Mesoscale and Nanoscale Physics",
+    "other" : "Other Condensed Matter",
+    "quant-gas" : "Quantum Gases",
+    "soft" : "Soft Condensed Matter",
+    "stat-mech" : "Statistical Mechanics", 
+    "str-el" : "Strongly Correlated Electrons",
+    "supr-con" : "Superconductivity"
+}
