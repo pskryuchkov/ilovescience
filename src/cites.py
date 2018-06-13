@@ -74,7 +74,8 @@ def extract_journal_info(ref):
 
 
 # FIXME: function is too big
-def main():
+import random
+def count_refs():
     print("Extracting refs...")
 
     global_ref_list = []
@@ -88,6 +89,7 @@ def main():
         with open('cache/{}.cache'.format(volume), 'rb') as f:
             d = pickle.load(f)
             files_list = d.keys()
+            files_list = random.sample(files_list, n_proc_articles)
 
     for g, file in enumerate(files_list):
         content = open(file, "r").readlines()
@@ -218,7 +220,7 @@ def arg_run():
             n_proc_articles = config.n_articles_debug
 
         shared.create_dir(config.ref_stat)
-        main()
+        count_refs()
 
 if __name__ == "__main__":
     arg_run()

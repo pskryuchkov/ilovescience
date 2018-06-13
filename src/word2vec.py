@@ -27,7 +27,7 @@ import config
 
 min_count = 10
 size = 300
-window = 10
+window = 20
 
 n_ass = 10
 
@@ -206,6 +206,7 @@ def arg_run():
 
     if not b_flag and not t_flag:
         # console
+        print(y)
         print("Word2vec on arxiv {}.{:02d}".format(y))
         console(vec_path.format(volume))
     else:

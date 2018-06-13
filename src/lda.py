@@ -49,10 +49,12 @@ def prepare_sentences(file_list, n_articles):
             d = pickle.load(f)
 
         for g, file in enumerate(d.keys()):
-            print("{}/{} {}".format(g + 1, n_articles, shared.fn_pure(file)))
+            #print("{}/{} {}".format(g + 1, n_articles, shared.fn_pure(file)))
             text = d[file]
 
             base += [x.split() for x in text]
+
+        base = random.sample(base, n_articles)
     return base
 
 
@@ -65,9 +67,9 @@ def calculate_keys(vol, n_top, n_pass, cache_corpus=True,
         raise Exception('There is no such path: {}'.format(texts_path))
 
     files_list = shared.random_glob(texts_path, n_proc_articles)
-
+    print(len(files_list))
     texts = prepare_sentences(files_list, n_proc_articles)
-
+    print(len(texts))
     print("Searching for bigrams...")
 
     if config.biGram:
