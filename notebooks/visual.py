@@ -280,10 +280,12 @@ def terms_evo(keys, se, y1, y2):
     data= [go.Bar(
             marker = dict(color='red'),
                     x=neg_labels,
+                    hoverinfo = "value",
                     y=neg_val),
            go.Bar(
             marker = dict(color='red'),
                     x=pos_labels,
+                    hoverinfo = "value",
                     y=pos_val)]
 
     layout = go.Layout(showlegend=False, xaxis = dict(tickangle=-40), width = 600, height = 400, margin=go.Margin(t=10))
@@ -311,8 +313,7 @@ def keys_top(keys, se, y):
     py.iplot(fig, show_link=False)
 
 
-
-def word_cloud(model, terms, extented_terms):
+def word_cloud(model, terms, extented_terms, n_sat = 100):
     terms_u = terms + extented_terms
     word_vecs = [model[x] for x in terms_u]
     vis_vec = TSNE().fit_transform(word_vecs)
@@ -325,14 +326,12 @@ def word_cloud(model, terms, extented_terms):
     for k, clust in enumerate(terms):
         for j, p in enumerate(extented_terms):
             if origin[p] == clust:
-                clusters[k].append([vis_x[j], vis_y[j]])
+                clusters[k].append([clust, p, vis_x[j], vis_y[j]])
 
     far_dist = {}
-    n_sat = 100
     for term in terms:
         sats = model.most_similar([term], topn=n_sat) 
         far_dist[term] = int(model.similarity(term, sats[-1][0]) * 100)
-
 
     scaler = StandardScaler()
     scaler.fit(array(list(far_dist.values())).astype(float64).reshape(-1,1))
@@ -340,22 +339,51 @@ def word_cloud(model, terms, extented_terms):
     for k in far_dist.keys():
         far_dist[k] = 1.0 - scaler.transform(far_dist[k])[0][0]
 
-
-    p_side = 15
-    plt.figure(figsize=(p_side, p_side))
-    plt.axis('equal')
-    plt.axis('off')
-
-    mean_ts = 20
+    data, annotations = [], []
+    mean_ts = 17
     delta_ts = 5
+    margin = 10
+    annotation_template = "word: {}<br>origin: {}<br>dist: {}"
     for j, clust in enumerate(clusters):
-        xc = [c[0] for c in clust]
-        yc = [c[1] for c in clust]
+        xc = [c[2] for c in clust]
+        yc = [c[3] for c in clust]
+        dists = [round(model.similarity(c[0], c[1]), 3) for c in clust]
+        text = [annotation_template.format(c[1], c[0], dists[k]) for k, c in enumerate(clust)] 
+        data.append(go.Scatter(
+                            x = xc,
+                            y = yc,
+                            text = text,
+                            mode = 'markers',
+                            hoverinfo = "text",
+                            marker = dict(
+                                        size = 6.5,
+                                        color = 'red',
+                                        opacity = 0.5
+                                    )))
 
-        plt.text(mean(xc), mean(yc), terms[j], weight='bold', 
-                 size = mean_ts + delta_ts * far_dist[terms[j]], horizontalalignment='center')   
-
-        plt.plot(xc, yc, "o", alpha=0.5, markeredgewidth=0, color="red")  
+        annotation_size = mean_ts + delta_ts * far_dist[terms[j]]
+        annotations.append(go.Annotation(
+                                         x = mean(xc), 
+                                         y = mean(yc), 
+                                         xanchor = "center",
+                                         showarrow = False,
+                                         text = "<b>{}</b>".format(terms[j]), 
+                                         font = dict(size = annotation_size, 
+                                                     color = 'black')))
+    layout = go.Layout(
+        width = 780, 
+        height = 700,
+        margin = go.Margin(l=margin, r=margin*3, b=margin, t=margin),
+        showlegend = False, 
+        hovermode = 'closest',
+        xaxis = dict(showticklabels=False, showgrid=False, 
+                     zeroline = False, color="lightgrey"),
+        yaxis = dict(showticklabels=False, showgrid=False, 
+                     zeroline = False, color="lightgrey"),
+    )
+    fig = dict(data=data, layout=layout)
+    fig['layout']['annotations'] = annotations
+    py.iplot(fig, show_link=False)
 
 
 def terms_dist(model, terms):
