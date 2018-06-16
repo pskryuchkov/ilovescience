@@ -84,6 +84,7 @@ def count_refs():
     texts_path = "../arxiv/{0}/{1}/".format(section, year)
 
     if not os.path.isfile('cache/{}.cache'.format(volume)):
+        print(os.path.isfile('cache/{}.cache'.format(volume)))
         files_list = shared.random_glob(texts_path, n_proc_articles)
     else:
         with open('cache/{}.cache'.format(volume), 'rb') as f:
@@ -223,4 +224,6 @@ def arg_run():
         count_refs()
 
 if __name__ == "__main__":
+    os.chdir(os.path.dirname(os.path.realpath(__file__)))
+    shared.create_dir(config.ref_stat)
     arg_run()

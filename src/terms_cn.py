@@ -4,9 +4,9 @@ import pickle
 import os
 
 path.insert(0, os.path.dirname(
-                    os.path.realpath("__file__")) + '/extra')
-
+                    os.path.realpath(__file__)) + '/extra')
 import shared
+import config
 
 
 def prepare_sentences(file_list, n_articles, volume):
@@ -74,9 +74,13 @@ def arg_run():
         section, year = argv[1].split(".")
         year = int(year)
 
-        #shared.create_dir(config.ref_stat)
-        count_terms(section, year)
+        if "-d" in argv:
+            count_terms(section, year, config.n_articles_debug)
+        else:
+            count_terms(section, year)
 
 if __name__ == "__main__":
+    os.chdir(os.path.dirname(os.path.realpath(__file__)))
+    shared.create_dir(config.terms_stat)
     arg_run()
     #count_terms("cond-mat", 10)

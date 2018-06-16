@@ -70,7 +70,7 @@ def pdf_from_url_to_txt(url):
                                   check_extractable=True):
         try:
             interpreter.process_page(page)
-        except Exception, exc:
+        except(Exception, exc):
             if str(exc) == "Timeout":
                 print("Converting timeout: {0}".format(url))
             else:
@@ -180,7 +180,7 @@ def main():
 
             signal.alarm(0)
 
-        except Exception, exc:
+        except(Exception, exc):
             print("{}: {}".format(articles[j], exc))
 
 

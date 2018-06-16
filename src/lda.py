@@ -173,4 +173,5 @@ def arg_run():
 if __name__ == "__main__":
     os.chdir(os.path.dirname(os.path.realpath(__file__)))
     stoplist = [x.rstrip() for x in open("extra/stoplist.txt", "r").readlines()]
+    shared.create_dir(config.lda_stat)
     arg_run()

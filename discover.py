@@ -2,9 +2,9 @@ from sys import argv
 import os
 
 if len(argv) < 2:
-    print "Error: too few arguments"
+    print("Error: too few arguments")
 elif len(argv) > 3:
-    print "Error: too many arguments"
+    print("Error: too many arguments")
 else:
     section = argv[1]
     prefix = "python -W ignore src/"

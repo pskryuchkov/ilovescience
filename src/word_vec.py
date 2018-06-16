@@ -103,8 +103,8 @@ def build_word_vec(show_log=True):
 
 
 def replics(model, target_word, topn=10):
-    return {word: model.vocab[word].count
-                           for word in model.vocab.keys()
+    return {word: model.wv.vocab[word].count
+                           for word in model.wv.vocab.keys()
                            if word.find(target_word) == 0}
 
 
@@ -149,19 +149,19 @@ def topics_info(word_vec_path):
     topics = topics_normalize(model, shared.get_lines(topics_path))
 
     for word in topics:
-        if word in model.vocab.keys():
+        if word in model.wv.vocab.keys():
             print(word)
             for neighbor in model.most_similar(positive=[word], topn=n_ass):
 
                 print("  '{}', {}, {}".format(neighbor[0], round(neighbor[1], 2),
-                                              model.vocab[neighbor[0]].count))
+                                              model.wv.vocab[neighbor[0]].count))
         else:
             print(word, "None")
 
 
 def vocab(word_vec_path):
     model = Word2Vec.load(word_vec_path)
-    keys = model.vocab.keys()
+    keys = model.wv.vocab.keys()
     keys.sort()
     return keys
 
@@ -169,14 +169,14 @@ def vocab(word_vec_path):
 def console(path):
     model = Word2Vec.load(path)
 
-    print("Vocabulary length: {} words".format(len(model.vocab.keys())))
+    print("Vocabulary length: {} words".format(len(model.wv.vocab.keys())))
     print("Minimal count: {} words".format(model.min_count))
 
     while True:
-        query = raw_input('> ')
-        if query in model.vocab.keys():
+        query = input('> ')
+        if query in model.wv.vocab.keys():
             for record in model.most_similar(positive=[query], topn=10):
-                print("{}, {}, {}".format(record[0], round(record[1], 2), model.vocab[record[0]].count))
+                print("{}, {}, {}".format(record[0], round(record[1], 2), model.wv.vocab[record[0]].count))
         else:
             print("There is no such word: '{}'".format(query))
 
@@ -193,6 +193,8 @@ def arg_run():
         n_proc_articles = config.n_articles_debug
 
     b_flag = "-b" in argv
+    c_flag = "-c" in argv
+    d_flag = "-d" in argv
     t_flag = "-t" in argv
 
     global volume
@@ -204,19 +206,17 @@ def arg_run():
     global topics_path
     topics_path = "../topics/{}.txt".format(s)
 
-    if not b_flag and not t_flag:
+    if c_flag:
         # console
-        print(y)
-        print("Word2vec on arxiv {}.{:02d}".format(y))
+        print("Word2vec on arxiv {}".format(volume))
         console(vec_path.format(volume))
-    else:
-        if b_flag:
-            # build
-            model = build_word_vec()
-            model.save(vec_path.format(volume))
-        elif t_flag:
-            # topic info
-            topics_info(vec_path.format(volume))
+    elif b_flag or d_flag:
+        # build
+        model = build_word_vec()
+        model.save(vec_path.format(volume))
+    elif t_flag:
+        # topic info
+        topics_info(vec_path.format(volume))
 
 
 if __name__ == "__main__":

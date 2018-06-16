@@ -1,18 +1,24 @@
-### to install dependencies, run:               ###
-###      $ pip install -r requirements.txt      ###
+numpy == 1.14.5
+gensim == 3.4.0
+pdfminer.six
+Unidecode == 1.0.22
 
-# text processing
-numpy==1.12.1
-gensim==3.0.0
-openpyxl==2.5.0a3
-pdfminer==20140328
 SocksiPy_branch==1.01
-Unidecode==0.04.21
 
-# visualizing (graphviz is required)
-matplotlib==1.3.1
-plotly==2.2.1
-networkx==1.9
+matplotlib==2.1.0
+plotly==2.5.1
 
-# notebook (jupyter is required)
-nbopen==0.5
+beautifulsoup4==4.6.0
+
+nbopen == 0.6
+
+scikit_learn==0.19.1
+
+
+
+
+
+
+
+
+

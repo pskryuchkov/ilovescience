@@ -1,13 +1,21 @@
 from unidecode import unidecode
+from os.path import isfile
 import fnmatch
 import random
+import pickle
 import errno
+import sys
 import os
 import re
 
 
+script_path = os.path.dirname(os.path.abspath(__file__))
+cache_fn = script_path + '/../cache/{}.cache'
+
+
 def ascii_normalize(text):
-    return [unidecode(line.decode("utf-8")) for line in text]
+    # line.decode("utf-8")
+    return [unidecode(line) for line in text]
 
 
 def get_lines(fn):
@@ -101,7 +109,7 @@ def save_csv(path="", sep=","):
         return inner
     return decorator
 
-
+"""
 def save_excel(path=""):
     def decorator(func):
         def inner(*args):
@@ -133,6 +141,7 @@ def save_excel(path=""):
             return table
         return inner
     return decorator
+"""
 
 
 def console_table(n_print=6, n_sep=30):
@@ -202,6 +211,40 @@ def plural_filter(texts):
         f_base.append(f_text)
 
     return f_base
+
+
+def filter_text(lines):
+    norm = ascii_normalize(lines)
+    filtered = " ".join(line_filter(norm, min_length=3))
+    return filtered.lower().split(".")
+
+
+def load_texts(fns, vol, use_cache):
+    cache = {}
+    cached = isfile(cache_fn.format(vol))
+
+    if cached and use_cache:
+        with open(cache_fn.format(vol), 'rb') as f:
+            cache = pickle.load(f)
+    else:
+        for j, file in enumerate(fns):
+            cache[file] = filter_text(open(file, "r").readlines())
+            print("{}/{} {}".format(j + 1, len(fns), fn_pure(file)))
+
+        with open(cache_fn.format(vol), 'wb') as f:
+            pickle.dump(cache, f)
+
+    return cache
+
+
+def prepare_texts(fns, vol, use_cache=True):
+    cache = load_texts(fns, vol, use_cache)
+
+    data = []
+    for file in fns:
+        if file in cache:
+            data += cache[file]
+    return data
 
 
 stop_list = get_lines(os.path.dirname(os.path.realpath(__file__)) + "/stoplist.txt")
