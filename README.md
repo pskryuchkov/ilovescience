@@ -4,15 +4,17 @@ Set of scripts for [arxiv.org](https://arxiv.org/) articles text mining
 
 ### Scripts
 
-`crawl.py` loads articles. It may take several hours.
+`articles_crawl.py` loads articles. It may take several hours
 
-`lda.py` extract keywords ([latent dirichlet allocation](https://en.wikipedia.org/wiki/Latent_Dirichlet_allocation) used)
+`annotations_crawl.py` loads annotations
 
-`terms_cn.py` runs frequent analisys (with [tf-idf](https://ru.wikipedia.org/wiki/TF-IDF)). List of topics required (topics.txt).
+`lda.py` extracts topics with [Latent Dirichlet Allocation](https://en.wikipedia.org/wiki/Latent_Dirichlet_allocation)
 
-`cites.py` counts references and show most citied articles.
+`terms_cn.py` counts keywords in articles base
 
-`word2vec.py` console for semantic similar words searching ([wiki](https://ru.wikipedia.org/wiki/Word2vec)). Pre-calclulated wordvectors required.
+`cites.py` counts references and show most citied articles
+
+`word_vec.py` builds [word2vec](https://ru.wikipedia.org/wiki/Word2vec) model
 
 Scripts stored in `src` path. Articles stored in `.txt` format in `arxiv/<section>/<year>/<month>/` Results stored in `stat` path. 
 
