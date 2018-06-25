@@ -37,9 +37,13 @@ path.insert(0, os.path.dirname(
 import shared
 
 from bs4 import BeautifulSoup as BS
+from statistics import median
 from functools import reduce
 from os.path import isfile
 
+from datetime import datetime
+
+opacity = 1.0
 
 annotations_path = "../arxiv/annotations"
 
@@ -103,7 +107,8 @@ def add_bar(fig, inp, n_topics, n_keys, n_row, n_col, chart_count):
             x=labels,
             y=values,
             orientation = 'h',
-            name = "topic #{}".format(chart_count + 1),
+            text=labels,
+            hoverinfo="text",
             marker = dict(color='orange')
     )
     fig.append_trace(data, (chart_count // n_col) + 1, (chart_count % n_col) + 1)
@@ -113,13 +118,11 @@ def add_bar(fig, inp, n_topics, n_keys, n_row, n_col, chart_count):
                                                                        color="lightgrey") 
 
 
-def draw_barchart(volume, n_keys = 6, n_row = 5, n_col = 3):
+def lda_topics(volume, n_keys = 6, n_row = 5, n_col = 3):
     fn = "../stat/lda/{}.keys.csv".format(volume)
     n_charts = n_row * n_col
 
     table = []
-    val = []
-    key = []
     with open(fn, "rt") as f:
         reader = csv.reader(f)
         next(f)
@@ -140,14 +143,16 @@ def draw_barchart(volume, n_keys = 6, n_row = 5, n_col = 3):
         add_bar(fig, topic_words, n_topics, n_keys, n_row, n_col, chart_count)
         chart_count += 1
 
-    fig['layout'].update(height=750, width=750, 
+    fig['layout'].update(height=650, width=750,
                             showlegend=False, title="", 
-                            margin=go.Margin(t=120))
+                            margin=go.Margin(t=50, l=120, b=20))
+
     py.iplot(fig, show_link=False);
 
 
 def citied_articles(volume, n_cites=10, head=cite_table_head):
     markdown_table = head
+    min_year, max_year = 1900, datetime.now().year
 
     with open("../stat/references/{}.txt".format(volume), "r") as f:
         data = f.readlines()
@@ -156,9 +161,14 @@ def citied_articles(volume, n_cites=10, head=cite_table_head):
     for line in data[:n_cites]:
         authors, year, count = line.split(",")
 
+        year, count = int(year), count.strip()
+
+        if year <= min_year or year >= max_year:
+            year = None
+
         markdown_table += line_format.format("<center>", "</center>",
                                               ", ".join(list(map(lambda x: x.strip(), authors.split("&")))),
-                                              year.strip(), count.strip())
+                                              year, count)
     display(Markdown(markdown_table))
 
 
@@ -255,7 +265,7 @@ def lda_articles(volume):
     lda_print(titles, articles)
 
 
-def terms_evo(keys, se, y1, y2):
+def keys_evo(se, y1, y2, precision=4):
     raw_table1 = [line.strip().split(";") 
             for line in open("../stat/freq/{}.{}.csv".format(se, y1), "r").readlines()[1:]]
 
@@ -265,49 +275,61 @@ def terms_evo(keys, se, y1, y2):
     table1 = {x[0]: float(x[1]) for x in raw_table1}
     table2 = {x[0]: float(x[1]) for x in raw_table2}
 
+    keys = list(set(table1) & set(table2))
+
     delta = []
     for k in keys:
-        delta.append([k, round(table2[k] - table1[k], 2)])
+        delta.append([k, round(table2[k] - table1[k], 4)])
 
     delta = sorted(delta, key=lambda x: x[1])
 
+    rounder = lambda x: round(x, precision)
+
     neg_labels = [x[0] for x in delta if x[1] < 0]
-    neg_val = [x[1] for x in delta if x[1] < 0]
+    neg_val = list(map(rounder, [x[1] for x in delta if x[1] < 0]))
 
     pos_labels = [x[0] for x in delta if x[1] > 0]
-    pos_val = [x[1] for x in delta if x[1] > 0]
+    pos_val = list(map(rounder, [x[1] for x in delta if x[1] > 0]))
 
     data= [go.Bar(
             marker = dict(color='red'),
                     x=neg_labels,
                     hoverinfo = "value",
-                    y=neg_val),
+                    name="down",
+                    y=neg_val,
+                    opacity=opacity),
            go.Bar(
             marker = dict(color='red'),
                     x=pos_labels,
                     hoverinfo = "value",
-                    y=pos_val)]
+                    name="up",
+                    y=pos_val,
+                    opacity=opacity)]
 
-    layout = go.Layout(showlegend=False, xaxis = dict(tickangle=-40), width = 600, height = 400, margin=go.Margin(t=10))
+    layout = go.Layout(showlegend=False, xaxis = dict(tickangle=-40), width = 600, height = 400, margin=go.Margin(t=30))
     fig = go.Figure(data=data, layout=layout)
 
     py.iplot(fig, show_link=False)
 
 
-def keys_top(keys, se, y):
+def keys_rate(se, y, precision=4):
     raw_table = [line.strip().split(";") 
             for line in open("../stat/freq/{}.{}.csv".format(se, y), "r").readlines()[1:]]
 
     table = [[x[0], float(x[1])] for x in raw_table]
     table = sorted(table, key=lambda x: x[1], reverse=True)
-    
+
+    labels = [z[0] for z in table]
+    values = list(map(lambda x: round(x, precision), [z[1] for z in table]))
+
     data = [go.Bar(
             marker = dict(color='green'),
-                    x=[z[0] for z in table],
-                    y=[z[1] for z in table])]
+                    x=labels,
+                    opacity=opacity,
+                    y=values)]
 
     layout = go.Layout(showlegend=False, xaxis = dict(tickangle=-40), width = 600,
-                        height = 400, margin=go.Margin(t=10))
+                        height = 400, margin=go.Margin(t=30))
     fig = go.Figure(data=data, layout=layout)
 
     py.iplot(fig, show_link=False)
@@ -349,27 +371,29 @@ def word_cloud(model, terms, extented_terms, n_sat = 100):
         yc = [c[3] for c in clust]
         dists = [round(model.similarity(c[0], c[1]), 3) for c in clust]
         text = [annotation_template.format(c[1], c[0], dists[k]) for k, c in enumerate(clust)] 
-        data.append(go.Scatter(
-                            x = xc,
-                            y = yc,
-                            text = text,
-                            mode = 'markers',
-                            hoverinfo = "text",
-                            marker = dict(
-                                        size = 6.5,
-                                        color = 'red',
-                                        opacity = 0.5
-                                    )))
+        data.append(
+            go.Scatter(
+                x = xc,
+                y = yc,
+                text = text,
+                mode = 'markers',
+                hoverinfo = "text",
+                marker = dict(
+                            size = 6.5,
+                            color = 'red',
+                            opacity = 0.5
+                        )))
 
         annotation_size = mean_ts + delta_ts * far_dist[terms[j]]
-        annotations.append(go.Annotation(
-                                         x = mean(xc), 
-                                         y = mean(yc), 
-                                         xanchor = "center",
-                                         showarrow = False,
-                                         text = "<b>{}</b>".format(terms[j]), 
-                                         font = dict(size = annotation_size, 
-                                                     color = 'black')))
+        annotations.append(
+            go.Annotation(
+                x = mean(xc), 
+                y = mean(yc), 
+                xanchor = "center",
+                showarrow = False,
+                text = "<b>{}</b>".format(terms[j]),
+                font = dict(size = annotation_size, 
+                            color = 'black')))
     layout = go.Layout(
         width = 780, 
         height = 700,
@@ -472,7 +496,7 @@ def subsections_ratio(section, year, colormap_name="Wistia", min_percent=0):
                     textposition = 'outside', values=chart_values,
                     pull=.05, marker=dict(colors=pieces_colors))]
 
-    layout = go.Layout(height = 450, margin=go.Margin(t=40))
+    layout = go.Layout(height = 450, width=650, margin=go.Margin(t=40))
 
     py.iplot({'data': trace, 'layout': layout}, show_link=False)
 
@@ -522,7 +546,21 @@ def categories_top_authors(an_headers, categories, ntop=4, max_ncat=10):
     return {c: sort_dict(authors_cn[c], ntop) for c in categories}
 
 
-def plot_top_authors(section, data, ntop=4):
+def authors_stat(headers, stat_func):
+    coauthors_cn = Counter()
+    for h in headers:
+        authors = h[0]
+        artcle_authors_cn = len(authors)
+        for author in authors:
+            if author in coauthors_cn:
+                coauthors_cn[author].append(artcle_authors_cn)
+            else:
+                coauthors_cn[author] = [artcle_authors_cn]
+
+    return {author : stat_func(coauthors_cn[author]) for author in coauthors_cn}
+
+
+def plot_top_authors(section, data, add_data, ntop=4):
     sub_sections = sorted(data.keys())
 
     if section + ".other" in sub_sections:
@@ -533,19 +571,24 @@ def plot_top_authors(section, data, ntop=4):
     ncol = 2
     nrow = math.ceil(len(sub_sections) / ncol)
 
+    hover_template = "n_articles: {}<br>n_coauthors_median: {}"
+
     subplots, annotations = [], []
     for j, w in enumerate(sub_sections):
         values = data[w]
 
         n_articles = [x[1] for x in values[:ntop]]
         top_authors = [x[0] for x in values[:ntop]]
+        hover_text = [hover_template.format(x[1], int(round(add_data[x[0]])))
+                      for x in values[:ntop]]
 
         subplots.append(go.Bar(
                             x=n_articles,
                             y=top_authors,
                             hoverinfo="text",
                             orientation='h',
-                            text=n_articles,
+                            text=hover_text,
+                            opacity=opacity,
                             marker=dict(color='blue')))
 
         for x, y in zip(n_articles, top_authors):
@@ -573,9 +616,9 @@ def plot_top_authors(section, data, ntop=4):
             fig['layout']['xaxis{0}'.format(idx + 1)].update(showticklabels=False, showgrid=False)
             fig['layout']['yaxis{0}'.format(idx + 1)]['tickfont'].update(size=11, color="lightgrey")
 
-    fig['layout'].update(height=150 * nrow, width=350 * ncol,
+    fig['layout'].update(height=150 * nrow, width=370 * ncol,
                          showlegend=False, title="",
-                         margin=go.Margin(t=60, l=140, b=30))
+                         margin=go.Margin(t=60, l=140, b=30, r=130))
 
     fig['layout']['annotations'].extend(annotations)
 
@@ -587,10 +630,11 @@ def active_authors(section, year):
 
     articles_categories = [x[1] for x in headers]
     raw_categories = set(reduce(lambda x, y: x + y, articles_categories))
-    categories = [x for x in raw_categories if x.find(section) == 0]
+    categories = [x for x in raw_categories if x.find(section + ".") == 0]
 
     authors = categories_top_authors(headers, categories)
-    plot_top_authors(section, authors)
+    coauthors_n_median = authors_stat(headers, lambda x: median(x) - 1)
+    plot_top_authors(section, authors, coauthors_n_median)
 
 
 ##############
@@ -676,7 +720,7 @@ def terms_subsections_plot(data_matrix, terms, subsections,
     plt.imshow(np.array(data_matrix).T, cmap=cm)
 
 
-def terms_subsections_occur(section, year, terms):
+def keys_subsections_occur(section, year, terms):
     groups, content = load_subsections_content(section, year)
     data_matrix = count_terms(content, terms)
     subsections = [re.sub("{}.".format(section), '', x) for x in groups.keys()]
